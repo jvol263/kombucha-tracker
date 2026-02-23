@@ -549,7 +549,7 @@ body {
 }
 .nav-btn {
   flex: 1;
-  max-width: 167px;
+  max-width: 125px;
   border: none;
   background: transparent;
   padding: 10px 0 8px;
@@ -564,6 +564,168 @@ body {
 }
 .nav-btn .nav-icon { font-size: 22px; }
 .nav-btn.active { color: var(--primary); }
+
+/* Recipes tab */
+.recipes-container {
+  padding: 14px 16px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+.recipe-section {
+  margin-bottom: 20px;
+}
+.recipe-section h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.recipe-hint {
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.recipe-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow);
+}
+.recipe-card.highlight {
+  border-left: 4px solid var(--primary);
+}
+.recipe-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.recipe-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-light);
+  vertical-align: middle;
+}
+.recipe-tag.yours {
+  background: var(--f1);
+  color: white;
+}
+.recipe-detail {
+  font-size: 13px;
+  color: var(--primary-dark);
+  font-weight: 600;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.recipe-note {
+  font-size: 13px;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+.recipe-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 8px;
+}
+.recipe-list li {
+  font-size: 13px;
+  color: var(--text);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.4;
+}
+.recipe-list li:last-child { border-bottom: none; }
+.recipe-divider {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 12px 0 8px;
+}
+.recipe-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.recipe-table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--border);
+  font-weight: 700;
+  color: var(--text-light);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.recipe-table td {
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.recipe-table tr:last-child td { border-bottom: none; }
+.ph-scale { margin-top: 8px; }
+.ph-row {
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.ph-row:last-child { border-bottom: none; }
+.ph-val { font-weight: 700; min-width: 60px; }
+.ph-desc { color: var(--text-light); }
+
+/* pH Chart */
+.ph-chart-container {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.ph-chart-container h4 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.ph-chart svg {
+  width: 100%;
+  height: 120px;
+  overflow: visible;
+}
+.ph-chart-label {
+  font-size: 10px;
+  fill: var(--text-light);
+}
+.ph-chart-line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ph-chart-dot {
+  fill: var(--primary);
+}
+.ph-chart-zone {
+  fill: #6b9e5a;
+  opacity: 0.1;
+}
+.ph-chart-zone-label {
+  font-size: 9px;
+  fill: #6b9e5a;
+  font-weight: 600;
+}
 
 /* Toast */
 .toast {
@@ -660,6 +822,151 @@ body {
   </div>
 </div>
 
+<!-- TAB: Recipes -->
+<div class="tab-content" id="tabRecipes">
+  <div class="recipes-container">
+
+    <div class="recipe-section">
+      <h3>F1 Standard Ratios <span class="recipe-hint">(per 1 liter)</span></h3>
+      <div class="recipe-card">
+        <div class="recipe-title">Classic Black Tea</div>
+        <div class="recipe-detail">Tea: 2 bags (or 4g loose) &middot; Sugar: 50-70g white &middot; Starter: 100-150ml</div>
+        <div class="recipe-note">The standard. Full-bodied, forgiving, fastest fermentation. Your current base.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Green Tea</div>
+        <div class="recipe-detail">Tea: 2 bags (or 3g loose) &middot; Sugar: 50-60g &middot; Starter: 100-150ml</div>
+        <div class="recipe-note">Lighter, more delicate. Slightly slower fermentation. Shorter steep (2-3 min) to avoid bitterness.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Oolong Tea</div>
+        <div class="recipe-detail">Tea: 3g loose (or 2 bags) &middot; Sugar: 50-60g &middot; Starter: 100-150ml</div>
+        <div class="recipe-note">Best of both worlds &mdash; complexity of black, lightness of green. Great for floral F2 flavors.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">White Tea</div>
+        <div class="recipe-detail">Tea: 3-4g loose (or 2 bags) &middot; Sugar: 50-60g &middot; Starter: 120-150ml</div>
+        <div class="recipe-note">Very mild, subtle. Slowest fermentation. Use more starter to compensate. Pairs with fruit F2.</div>
+      </div>
+    </div>
+
+    <div class="recipe-section">
+      <h3>Scaling Guide</h3>
+      <div class="recipe-card">
+        <table class="recipe-table">
+          <tr><th>Volume</th><th>Tea</th><th>Sugar</th><th>Starter</th></tr>
+          <tr><td>1L</td><td>2 bags / 4g</td><td>50-70g</td><td>100-150ml</td></tr>
+          <tr><td>2L</td><td>4 bags / 8g</td><td>100-140g</td><td>200-300ml</td></tr>
+          <tr><td>4L</td><td>8 bags / 16g</td><td>200-280g</td><td>400-600ml</td></tr>
+          <tr><td>5L</td><td>10 bags / 20g</td><td>250-350g</td><td>500-750ml</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="recipe-section">
+      <h3>Taming Strong Kombucha</h3>
+      <div class="recipe-card highlight">
+        <div class="recipe-note">Your kombucha comes out strong &mdash; here are ways to dial it back:</div>
+        <ul class="recipe-list">
+          <li><strong>Shorter F1:</strong> Pull 2-3 days earlier than usual. Check pH &mdash; aim for 3.2-3.5 instead of going below 3.0</li>
+          <li><strong>Less tea:</strong> Try reducing from 2 bags/L to 1.5 bags/L</li>
+          <li><strong>More sugar:</strong> Try 70g/L instead of 50g. More residual sweetness balances tartness</li>
+          <li><strong>More starter isn't always better:</strong> Over 15% starter makes it tart faster. Try 10% (100ml per liter)</li>
+          <li><strong>Temperature:</strong> Cooler fermentation (18-22&deg;C) produces milder, smoother kombucha vs hot/fast</li>
+          <li><strong>Green or oolong base:</strong> Naturally milder than black tea</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="recipe-section">
+      <h3>F2 Flavoring Recipes <span class="recipe-hint">(per 500ml bottle)</span></h3>
+
+      <div class="recipe-card">
+        <div class="recipe-title">Ginger + Turmeric <span class="recipe-tag yours">Your Recipe</span></div>
+        <div class="recipe-detail">15-20g fresh ginger (sliced) + 5-10g fresh turmeric (or 1/2 tsp powder)</div>
+        <div class="recipe-note">Anti-inflammatory powerhouse. Add 1 tsp sugar for carbonation. 2-4 days F2. Tip: grate for stronger flavor, slice for milder.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Dry Hopped <span class="recipe-tag yours">Your Recipe</span></div>
+        <div class="recipe-detail">3-5g whole hops (Cascade, Citra, or Galaxy work well)</div>
+        <div class="recipe-note">IPA-style kombucha. Add hops directly. 2-3 days F2 max or it gets grassy. No extra sugar needed &mdash; hops don't add carbonation but kombucha should have enough residual sugar. Strain before drinking.</div>
+      </div>
+
+      <div class="recipe-divider">Popular Recipes to Try</div>
+
+      <div class="recipe-card">
+        <div class="recipe-title">Ginger + Lemon</div>
+        <div class="recipe-detail">15g fresh ginger (grated) + juice of 1/4 lemon + 1 tsp sugar</div>
+        <div class="recipe-note">Bright and zesty. Classic crowd-pleaser. The lemon juice adds acidity so check carbonation at day 2.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Mixed Berry</div>
+        <div class="recipe-detail">30-40g mashed berries (blueberry, raspberry, strawberry)</div>
+        <div class="recipe-note">Beautiful color, fruity sweetness. Fruit sugars drive strong carbonation &mdash; burp bottles daily! 2-3 days F2.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Mango + Habanero</div>
+        <div class="recipe-detail">30g mango (diced) + 1 thin slice habanero (seeds removed)</div>
+        <div class="recipe-note">Sweet heat. Start with less pepper &mdash; heat intensifies during F2. 2-3 days.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Apple + Cinnamon</div>
+        <div class="recipe-detail">30g apple (diced or juiced) + 1/2 cinnamon stick</div>
+        <div class="recipe-note">Autumn vibes. Apple juice drives good carbonation. Cinnamon adds warmth without sugar. 3-4 days F2.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Lavender + Lemon</div>
+        <div class="recipe-detail">1 tsp dried culinary lavender + juice of 1/4 lemon + 1 tsp honey</div>
+        <div class="recipe-note">Floral and refreshing. Use food-grade lavender only. Pairs beautifully with green or oolong base.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Yuzu + Shiso</div>
+        <div class="recipe-detail">2 tbsp yuzu juice + 3-4 fresh shiso leaves</div>
+        <div class="recipe-note">Japanese-inspired. Yuzu adds bright citrus, shiso adds herbal complexity. Easy to find in Tokyo. 2-3 days F2.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Ume (Plum) + Ginger</div>
+        <div class="recipe-detail">1 umeboshi (pitted, mashed) or 2 tbsp ume syrup + 10g fresh ginger</div>
+        <div class="recipe-note">Salty-sour-sweet. Uniquely Japanese. The salt from umeboshi adds interesting depth. 2-3 days F2.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Passionfruit</div>
+        <div class="recipe-detail">Pulp of 1 fresh passionfruit (seeds and all)</div>
+        <div class="recipe-note">Tropical, aromatic, gorgeous. Seeds are fine to leave in. Very active carbonation &mdash; burp daily. 2 days F2 is usually enough.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Elderflower</div>
+        <div class="recipe-detail">2 tbsp elderflower cordial or 1 tbsp dried elderflower</div>
+        <div class="recipe-note">Delicate, floral, champagne-like. Best with white or green tea base. Light carbonation. 3-4 days F2.</div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-title">Cold Brew Coffee</div>
+        <div class="recipe-detail">60ml cold brew concentrate (unsweetened)</div>
+        <div class="recipe-note">Coffee kombucha! Rich and complex. Caffeine boost. Best with black tea base. 2 days F2. Don't over-ferment or it gets bitter.</div>
+      </div>
+    </div>
+
+    <div class="recipe-section">
+      <h3>pH Reference Guide</h3>
+      <div class="recipe-card">
+        <div class="recipe-note">Track pH to know exactly when your kombucha is ready:</div>
+        <div class="ph-scale">
+          <div class="ph-row"><span class="ph-val" style="color:#c9534f">2.0-2.5</span><span class="ph-desc">Too acidic / vinegar. Use as cleaning agent or salad dressing!</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#e8a948">2.5-3.0</span><span class="ph-desc">Very tart. Strong kombucha. Good if you like it punchy.</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#6b9e5a">3.0-3.5</span><span class="ph-desc">Sweet spot for most people. Balanced sweet-tart.</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#6b9e5a">3.5-4.0</span><span class="ph-desc">Mildly tart, still sweet. Good for beginners or mixing.</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#b0aaa2">4.0-4.5</span><span class="ph-desc">Barely fermented sweet tea. Needs more time.</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#b0aaa2">4.5+</span><span class="ph-desc">Starting pH. Not yet kombucha.</span></div>
+        </div>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-note"><strong>How to measure pH:</strong> Use pH test strips (pH 0-6 range, ~&yen;500-1000 on Amazon Japan) or a digital pH meter (~&yen;2000-3000). Dip strip in a small sample, compare color to the chart. Test every 2-3 days during F1.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- MODAL: New Batch -->
 <div class="modal-overlay" id="newBatchOverlay" onclick="if(event.target===this)closeModal('newBatchOverlay')">
   <div class="modal">
@@ -716,17 +1023,17 @@ body {
       </div>
       <div class="form-group">
         <label>Water (liters)</label>
-        <input type="number" id="nbWaterLiters" placeholder="e.g. 4" step="0.1" min="0">
+        <input type="number" id="nbWaterLiters" placeholder="e.g. 4" step="0.1" min="0" oninput="autoCalcTotal()">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label>Starter Liquid (ml)</label>
-        <input type="number" id="nbStarterMl" placeholder="e.g. 400" step="50" min="0">
+        <input type="number" id="nbStarterMl" placeholder="e.g. 400" step="50" min="0" oninput="autoCalcTotal()">
       </div>
       <div class="form-group">
-        <label>Total Volume (L)</label>
-        <input type="number" id="nbTotalLiters" placeholder="e.g. 4.5" step="0.1" min="0">
+        <label>Total Volume (L) <span style="font-size:10px;font-weight:400;text-transform:none">auto</span></label>
+        <input type="number" id="nbTotalLiters" placeholder="auto" step="0.1" min="0">
       </div>
     </div>
     <div class="form-group">
@@ -914,6 +1221,10 @@ body {
   <button class="nav-btn" id="navInsights" onclick="switchTab('Insights')">
     <span class="nav-icon">&#128200;</span>
     Insights
+  </button>
+  <button class="nav-btn" id="navRecipes" onclick="switchTab('Recipes')">
+    <span class="nav-icon">&#128214;</span>
+    Recipes
   </button>
 </div>
 
@@ -1424,6 +1735,18 @@ function confirmReject() {
 }
 
 // ═══════════════════════════════════════════════════════
+// AUTO-CALCULATE TOTAL VOLUME
+// ═══════════════════════════════════════════════════════
+function autoCalcTotal() {
+  const water = parseFloat(document.getElementById('nbWaterLiters').value) || 0;
+  const starter = parseFloat(document.getElementById('nbStarterMl').value) || 0;
+  if (water > 0 || starter > 0) {
+    const total = water + (starter / 1000);
+    document.getElementById('nbTotalLiters').value = Math.round(total * 10) / 10;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // TAB SWITCHING
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
@@ -1900,6 +2223,13 @@ function openBatchDetail(batchId) {
   // Checks
   if (batch.checks && batch.checks.length > 0) {
     html += '<div class="detail-section"><h3>Fermentation Checks</h3>';
+
+    // pH over time chart
+    const phChecks = batch.checks.filter(c => c.ph);
+    if (phChecks.length >= 1) {
+      html += renderPhChart(batch, phChecks);
+    }
+
     batch.checks.forEach(c => {
       html += '<div class="check-item">';
       html += '<div class="check-date">' + formatDateShort(c.date) + '</div>';
@@ -1951,6 +2281,84 @@ async function promptDeleteBatch(batchId) {
     deleteBatch(batchId);
     closeDetail();
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// pH CHART
+// ═══════════════════════════════════════════════════════
+function renderPhChart(batch, phChecks) {
+  // Include startPh as first data point if available
+  const dataPoints = [];
+  if (batch.startPh) {
+    dataPoints.push({ date: batch.f1Start, ph: batch.startPh, day: 0 });
+  }
+  phChecks.forEach(c => {
+    const day = daysBetween(batch.f1Start, c.date);
+    dataPoints.push({ date: c.date, ph: c.ph, day: day });
+  });
+  if (batch.endPh && batch.f1End) {
+    const exists = dataPoints.find(d => d.date === batch.f1End);
+    if (!exists) {
+      dataPoints.push({ date: batch.f1End, ph: batch.endPh, day: daysBetween(batch.f1Start, batch.f1End) });
+    }
+  }
+
+  if (dataPoints.length < 1) return '';
+
+  // Chart dimensions
+  const W = 280, H = 100;
+  const padL = 30, padR = 10, padT = 10, padB = 22;
+  const cW = W - padL - padR;
+  const cH = H - padT - padB;
+
+  // pH range (inverted - lower pH is "more fermented" so show it going down)
+  const phValues = dataPoints.map(d => d.ph);
+  const phMin = Math.floor(Math.min(...phValues) * 2) / 2 - 0.5;
+  const phMax = Math.ceil(Math.max(...phValues) * 2) / 2 + 0.5;
+  const dayMax = Math.max(...dataPoints.map(d => d.day), 1);
+
+  function x(day) { return padL + (day / dayMax) * cW; }
+  function y(ph) { return padT + ((phMax - ph) / (phMax - phMin)) * cH; }
+
+  let svg = '<div class="ph-chart-container"><h4>pH Over Time</h4>';
+  svg += '<div class="ph-chart"><svg viewBox="0 0 ' + W + ' ' + H + '">';
+
+  // Sweet spot zone (3.0-3.5)
+  const zoneTop = Math.max(y(3.5), padT);
+  const zoneBot = Math.min(y(3.0), padT + cH);
+  if (zoneBot > zoneTop) {
+    svg += '<rect class="ph-chart-zone" x="' + padL + '" y="' + zoneTop + '" width="' + cW + '" height="' + (zoneBot - zoneTop) + '"/>';
+    svg += '<text class="ph-chart-zone-label" x="' + (padL + 4) + '" y="' + (zoneTop + 10) + '">sweet spot</text>';
+  }
+
+  // Grid lines and labels
+  for (let ph = Math.ceil(phMin); ph <= Math.floor(phMax); ph += 0.5) {
+    if (ph === Math.ceil(phMin) || ph % 1 === 0) {
+      const yy = y(ph);
+      svg += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '" stroke="' + '#e5ddd3' + '" stroke-width="0.5" stroke-dasharray="3,3"/>';
+      svg += '<text class="ph-chart-label" x="' + (padL - 4) + '" y="' + (yy + 3) + '" text-anchor="end">' + ph.toFixed(1) + '</text>';
+    }
+  }
+
+  // Day labels
+  dataPoints.forEach(d => {
+    svg += '<text class="ph-chart-label" x="' + x(d.day) + '" y="' + (H - 2) + '" text-anchor="middle">D' + d.day + '</text>';
+  });
+
+  // Line
+  if (dataPoints.length > 1) {
+    const pathParts = dataPoints.map((d, i) => (i === 0 ? 'M' : 'L') + x(d.day).toFixed(1) + ',' + y(d.ph).toFixed(1));
+    svg += '<path class="ph-chart-line" d="' + pathParts.join(' ') + '"/>';
+  }
+
+  // Dots with pH labels
+  dataPoints.forEach(d => {
+    svg += '<circle class="ph-chart-dot" cx="' + x(d.day).toFixed(1) + '" cy="' + y(d.ph).toFixed(1) + '" r="3.5"/>';
+    svg += '<text style="font-size:9px;fill:var(--text);font-weight:700" x="' + x(d.day).toFixed(1) + '" y="' + (y(d.ph) - 7).toFixed(1) + '" text-anchor="middle">' + d.ph + '</text>';
+  });
+
+  svg += '</svg></div></div>';
+  return svg;
 }
 
 // ═══════════════════════════════════════════════════════
