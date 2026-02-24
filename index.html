@@ -746,6 +746,130 @@ body {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* Confidence indicator */
+.confidence-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+  margin-left: 6px;
+}
+.confidence-pill.high { background: #d4edda; color: #155724; }
+.confidence-pill.medium { background: #fff3cd; color: #856404; }
+.confidence-pill.low { background: #f0eee8; color: var(--text-light); }
+
+/* Sparkline */
+.sparkline-container {
+  margin: 4px 0 2px;
+  height: 28px;
+}
+.sparkline-container svg {
+  width: 100%;
+  height: 28px;
+  overflow: visible;
+}
+.sparkline-line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sparkline-dot {
+  fill: var(--primary);
+}
+.sparkline-zone {
+  fill: #6b9e5a;
+  opacity: 0.08;
+}
+
+/* Temp chart line (dual axis) */
+.temp-chart-line {
+  fill: none;
+  stroke: #e8a948;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 5,3;
+}
+.temp-chart-dot {
+  fill: #e8a948;
+}
+
+/* Vessel capacity display */
+.vessel-capacity {
+  font-size: 11px;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+/* Recipe scaler */
+.recipe-scaler {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+.recipe-scaler h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.scaler-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.scaler-row label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 60px;
+}
+.scaler-row input, .scaler-row select {
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
+  width: 100px;
+  -webkit-appearance: none;
+}
+.scaler-row select { width: 140px; }
+.scaler-results {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.scaler-result-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  padding: 4px 0;
+}
+.scaler-result-row .sr-label { color: var(--text-light); }
+.scaler-result-row .sr-value { font-weight: 700; color: var(--primary-dark); }
+
+/* Add vessel capacity input */
+.add-vessel-row-ext {
+  display: grid;
+  grid-template-columns: 1fr 80px auto;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: center;
+}
+.add-vessel-row-ext input { width: 100%; }
+
 /* Confirm dialog */
 .confirm-overlay {
   display: none;
@@ -825,6 +949,34 @@ body {
 <!-- TAB: Recipes -->
 <div class="tab-content" id="tabRecipes">
   <div class="recipes-container">
+
+    <!-- Dynamic Recipe Scaler -->
+    <div class="recipe-scaler" id="recipeScaler">
+      <h4>Recipe Calculator</h4>
+      <div class="scaler-row">
+        <label>Volume</label>
+        <input type="number" id="scalerVolume" value="4" step="0.5" min="0.5" max="20" oninput="updateScaler()">
+        <span style="font-size:13px;color:var(--text-light)">liters</span>
+      </div>
+      <div class="scaler-row">
+        <label>Tea</label>
+        <select id="scalerTeaType" onchange="updateScaler()">
+          <option value="black">Black Tea</option>
+          <option value="green">Green Tea</option>
+          <option value="oolong">Oolong</option>
+          <option value="white">White Tea</option>
+        </select>
+      </div>
+      <div class="scaler-row">
+        <label>Strength</label>
+        <select id="scalerStrength" onchange="updateScaler()">
+          <option value="mild">Mild</option>
+          <option value="standard" selected>Standard</option>
+          <option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="scaler-results" id="scalerResults"></div>
+    </div>
 
     <div class="recipe-section">
       <h3>F1 Standard Ratios <span class="recipe-hint">(per 1 liter)</span></h3>
@@ -1036,13 +1188,35 @@ body {
         <input type="number" id="nbTotalLiters" placeholder="auto" step="0.1" min="0">
       </div>
     </div>
-    <div class="form-group">
-      <label>Starting pH (optional)</label>
-      <input type="number" id="nbStartPh" placeholder="e.g. 4.2" step="0.1" min="0" max="14">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Starting pH (optional)</label>
+        <input type="number" id="nbStartPh" placeholder="e.g. 4.2" step="0.1" min="0" max="14">
+      </div>
+      <div class="form-group">
+        <label>Brew Temp (&deg;C)</label>
+        <input type="number" id="nbStartBrewTemp" placeholder="auto" step="0.5">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>SCOBY Weight (g)</label>
+        <input type="number" id="nbScobyWeight" placeholder="e.g. 150" step="10" min="0">
+      </div>
+      <div class="form-group">
+        <label>SCOBY Health</label>
+        <select id="nbScobyHealth">
+          <option value="">Unknown</option>
+          <option value="excellent">Excellent</option>
+          <option value="good">Good</option>
+          <option value="fair">Fair</option>
+          <option value="weak">Weak</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
       <label>SCOBY Notes</label>
-      <textarea id="nbScobyNotes" placeholder="Health, generation, thickness..."></textarea>
+      <textarea id="nbScobyNotes" placeholder="Generation, thickness, appearance..."></textarea>
     </div>
     <div class="form-group">
       <label>Notes</label>
@@ -1064,14 +1238,18 @@ body {
       <label>Date</label>
       <input type="date" id="checkDate">
     </div>
+    <div class="form-group">
+      <label>pH Reading</label>
+      <input type="number" id="checkPh" placeholder="e.g. 3.5" step="0.1" min="0" max="14">
+    </div>
     <div class="form-row">
       <div class="form-group">
-        <label>pH Reading</label>
-        <input type="number" id="checkPh" placeholder="e.g. 3.5" step="0.1" min="0" max="14">
+        <label>Brew Temp (&deg;C)</label>
+        <input type="number" id="checkBrewTemp" placeholder="liquid temp" step="0.5">
       </div>
       <div class="form-group">
         <label>Ambient Temp (&deg;C)</label>
-        <input type="number" id="checkTemp" placeholder="auto" step="0.5">
+        <input type="number" id="checkAmbientTemp" placeholder="auto" step="0.5">
       </div>
     </div>
     <div class="form-group">
@@ -1182,8 +1360,9 @@ body {
       <button class="modal-close" onclick="closeModal('vesselMgrOverlay')">&times;</button>
     </div>
     <div id="vesselMgrList"></div>
-    <div class="add-vessel-row">
+    <div class="add-vessel-row-ext">
       <input type="text" id="newVesselName" placeholder="New vessel name...">
+      <input type="number" id="newVesselCapacity" placeholder="L" step="0.5" min="0.5" style="font-size:13px" title="Capacity in liters">
       <button class="submit-btn" style="width:auto;padding:12px 20px;margin-top:0" onclick="addNewVessel()">Add</button>
     </div>
   </div>
@@ -1289,7 +1468,7 @@ function updateTempDisplay() {
 }
 
 // ═══════════════════════════════════════════════════════
-// FERMENTATION ESTIMATION
+// FERMENTATION ESTIMATION (3-level model)
 // ═══════════════════════════════════════════════════════
 function estimateFermentationDays(avgTempC) {
   if (avgTempC >= 30) return { minDays: 5, maxDays: 7 };
@@ -1299,15 +1478,104 @@ function estimateFermentationDays(avgTempC) {
   return { minDays: 28, maxDays: 42 };
 }
 
+// Confidence: how much data do we have to refine the estimate?
+function getEstimationConfidence(batch) {
+  let score = 0;
+  let maxScore = 0;
+
+  // Level 1: Temperature data (base)
+  maxScore += 2;
+  if (weatherData && weatherData.daily) score += 1;
+  const tempChecks = (batch.checks || []).filter(c => c.temp || c.brewTemp || c.ambientTemp);
+  if (tempChecks.length >= 1) score += 1;
+
+  // Level 2: pH trend data
+  maxScore += 3;
+  const phChecks = (batch.checks || []).filter(c => c.ph);
+  if (batch.startPh) score += 1;
+  if (phChecks.length >= 1) score += 1;
+  if (phChecks.length >= 3) score += 1;
+
+  // Level 3: SCOBY + recipe completeness
+  maxScore += 2;
+  if (batch.scobyWeightG || batch.scobyHealth) score += 1;
+  if (batch.sugarGrams && batch.waterLiters && batch.starterMl) score += 1;
+
+  const pct = score / maxScore;
+  if (pct >= 0.7) return { level: 'high', label: 'High', score: score, max: maxScore };
+  if (pct >= 0.4) return { level: 'medium', label: 'Med', score: score, max: maxScore };
+  return { level: 'low', label: 'Low', score: score, max: maxScore };
+}
+
+// Enhanced estimate: if we have pH trend, use it to project ready date
+function estimateWithPhTrend(batch) {
+  const phChecks = (batch.checks || []).filter(c => c.ph);
+  if (phChecks.length < 2 || !batch.startPh) return null;
+
+  // Build pH timeline
+  const phPoints = [{ day: 0, ph: batch.startPh }];
+  phChecks.forEach(c => {
+    const day = daysBetween(batch.f1Start, c.date);
+    phPoints.push({ day: day, ph: c.ph });
+  });
+  phPoints.sort((a, b) => a.day - b.day);
+
+  // Linear regression on pH vs days
+  const n = phPoints.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  phPoints.forEach(p => { sumX += p.day; sumY += p.ph; sumXY += p.day * p.ph; sumX2 += p.day * p.day; });
+  const denom = n * sumX2 - sumX * sumX;
+  if (denom === 0) return null;
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / n;
+
+  if (slope >= 0) return null; // pH not dropping
+
+  // Target pH range: 3.0-3.5
+  const targetPh = 3.25;
+  const estDay = (targetPh - intercept) / slope;
+  if (estDay < 0 || estDay > 90) return null;
+
+  const startDate = new Date(batch.f1Start + 'T00:00:00');
+  const readyDate = new Date(startDate);
+  readyDate.setDate(readyDate.getDate() + Math.round(estDay));
+  return readyDate;
+}
+
+// SCOBY health adjustment factor
+function scobyFactor(batch) {
+  if (!batch.scobyHealth) return 1.0;
+  const factors = { excellent: 0.85, good: 0.95, fair: 1.05, weak: 1.2 };
+  return factors[batch.scobyHealth] || 1.0;
+}
+
+// Sugar concentration adjustment
+function sugarFactor(batch) {
+  if (!batch.sugarGrams || !batch.waterLiters) return 1.0;
+  const gPerL = batch.sugarGrams / batch.waterLiters;
+  if (gPerL > 80) return 1.1; // more sugar = slightly slower
+  if (gPerL < 40) return 0.9; // less sugar = slightly faster
+  return 1.0;
+}
+
 function calculateEstimatedReadyDate(batch) {
+  // Level 2: Try pH-based estimate first (most accurate)
+  const phEstimate = estimateWithPhTrend(batch);
+  if (phEstimate) return phEstimate;
+
+  // Level 1: Temperature-based with SCOBY/sugar adjustments
   const startDate = new Date(batch.f1Start + 'T00:00:00');
   const today = new Date();
   today.setHours(0,0,0,0);
   const daysSinceStart = Math.max(0, Math.floor((today - startDate) / 86400000));
 
+  const sFactor = scobyFactor(batch);
+  const suFactor = sugarFactor(batch);
+  const combinedFactor = sFactor * suFactor;
+
   if (!weatherData || !weatherData.daily) {
     const est = estimateFermentationDays(24);
-    const mid = Math.round((est.minDays + est.maxDays) / 2);
+    const mid = Math.round(((est.minDays + est.maxDays) / 2) * combinedFactor);
     const rd = new Date(startDate);
     rd.setDate(rd.getDate() + mid);
     return rd;
@@ -1329,8 +1597,8 @@ function calculateEstimatedReadyDate(batch) {
       return cd.toDateString() === dd.toDateString();
     });
 
-    if (checkForDay && checkForDay.temp) {
-      dayTemp = checkForDay.temp;
+    if (checkForDay && (checkForDay.brewTemp || checkForDay.ambientTemp || checkForDay.temp)) {
+      dayTemp = checkForDay.brewTemp || checkForDay.ambientTemp || checkForDay.temp;
     } else if (d >= daysSinceStart) {
       const fi = d - daysSinceStart;
       dayTemp = fi < 7 ? (forecastAvgs[fi] || weekAvg) : weekAvg;
@@ -1339,7 +1607,7 @@ function calculateEstimatedReadyDate(batch) {
     }
 
     const est = estimateFermentationDays(dayTemp);
-    const mid = (est.minDays + est.maxDays) / 2;
+    const mid = (est.minDays + est.maxDays) / 2 * combinedFactor;
     progress += 1 / mid;
 
     if (progress >= 1) {
@@ -1359,11 +1627,13 @@ function getEstimatedReadyRange(batch) {
   const today = new Date();
   today.setHours(0,0,0,0);
   const daysSinceStart = Math.max(0, Math.floor((today - startDate) / 86400000));
+  const sFactor = scobyFactor(batch);
+  const suFactor = sugarFactor(batch);
 
   if (!weatherData || !weatherData.daily) {
     const est = estimateFermentationDays(24);
-    const early = new Date(startDate); early.setDate(early.getDate() + est.minDays);
-    const late = new Date(startDate); late.setDate(late.getDate() + est.maxDays);
+    const early = new Date(startDate); early.setDate(early.getDate() + Math.round(est.minDays * sFactor * suFactor));
+    const late = new Date(startDate); late.setDate(late.getDate() + Math.round(est.maxDays * sFactor * suFactor));
     return { earliest: early, latest: late };
   }
 
@@ -1383,8 +1653,8 @@ function getEstimatedReadyRange(batch) {
       return cd.toDateString() === dd.toDateString();
     });
 
-    if (checkForDay && checkForDay.temp) {
-      dayTemp = checkForDay.temp;
+    if (checkForDay && (checkForDay.brewTemp || checkForDay.ambientTemp || checkForDay.temp)) {
+      dayTemp = checkForDay.brewTemp || checkForDay.ambientTemp || checkForDay.temp;
     } else if (d >= daysSinceStart) {
       const fi = d - daysSinceStart;
       dayTemp = fi < 7 ? (forecastAvgs[fi] || weekAvg) : weekAvg;
@@ -1393,8 +1663,8 @@ function getEstimatedReadyRange(batch) {
     }
 
     const est = estimateFermentationDays(dayTemp);
-    progressMin += 1 / est.minDays;
-    progressMax += 1 / est.maxDays;
+    progressMin += 1 / (est.minDays * sFactor * suFactor);
+    progressMax += 1 / (est.maxDays * sFactor * suFactor);
 
     if (earliestDay === null && progressMin >= 1) earliestDay = d;
     if (latestDay === null && progressMax >= 1) latestDay = d;
@@ -1756,6 +2026,7 @@ function switchTab(name) {
   document.getElementById('nav' + name).classList.add('active');
   if (name === 'History') renderHistory();
   if (name === 'Insights') renderInsights();
+  if (name === 'Recipes') updateScaler();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1819,13 +2090,17 @@ function renderDashboard() {
         else { statusClass = 'f1-active'; statusBadge = '<span class="status-badge f1">F1 Active</span>'; }
 
         const lastCheck = (activeBatch.checks && activeBatch.checks.length > 0) ? activeBatch.checks[activeBatch.checks.length - 1] : null;
+        const confidence = getEstimationConfidence(activeBatch);
+        const confPill = '<span class="confidence-pill ' + confidence.level + '">' + confidence.label + '</span>';
+        const sparkline = renderSparkline(activeBatch);
 
         cardContent = '<div class="vessel-info">' +
           '<div class="info-row"><span class="dl">' + teaEmoji(activeBatch.teaType) + ' ' + teaLabel(activeBatch.teaType) + ' tea</span><span class="info-label">Day ' + days + '</span></div>' +
           '<div class="info-row"><span class="dl">Brewed ' + formatDateShort(activeBatch.f1Start) + '</span><span class="dv">Vol: ' + (activeBatch.totalLiters || '?') + 'L</span></div>' +
           (lastCheck ? '<div class="info-row"><span class="dl">Last pH: ' + (lastCheck.ph || '?') + '</span><span class="dl">' + formatDateShort(lastCheck.date) + '</span></div>' : '') +
-          '<div class="info-row"><span class="dl">Est. ready</span><span class="dv">' + formatDateShort(dateStrFromDate(range.earliest)) + ' - ' + formatDateShort(dateStrFromDate(range.latest)) + '</span></div>' +
+          '<div class="info-row"><span class="dl">Est. ready' + confPill + '</span><span class="dv">' + formatDateShort(dateStrFromDate(range.earliest)) + ' - ' + formatDateShort(dateStrFromDate(range.latest)) + '</span></div>' +
           '</div>' +
+          sparkline +
           '<div class="progress-bar-container"><div class="progress-bar' + barClass + '" style="width:' + progressPct + '%"></div></div>';
 
         actions = '<button class="vessel-action" onclick="openCheckForm(\'' + activeBatch.id + '\')">Check</button>' +
@@ -1928,6 +2203,9 @@ function openNewBatchForm(vesselFbKey) {
   document.getElementById('nbStarterMl').value = '';
   document.getElementById('nbTotalLiters').value = '';
   document.getElementById('nbStartPh').value = '';
+  document.getElementById('nbStartBrewTemp').value = getCurrentTemp() != null ? Math.round(getCurrentTemp() * 10) / 10 : '';
+  document.getElementById('nbScobyWeight').value = '';
+  document.getElementById('nbScobyHealth').value = '';
   document.getElementById('nbScobyNotes').value = '';
   document.getElementById('nbNotes').value = '';
   document.getElementById('newBatchOverlay').classList.add('active');
@@ -1955,7 +2233,10 @@ function saveNewBatch() {
     starterMl: parseFloat(document.getElementById('nbStarterMl').value) || null,
     totalLiters: parseFloat(document.getElementById('nbTotalLiters').value) || null,
     scobyNotes: document.getElementById('nbScobyNotes').value.trim() || null,
+    scobyWeightG: parseFloat(document.getElementById('nbScobyWeight').value) || null,
+    scobyHealth: document.getElementById('nbScobyHealth').value || null,
     startPh: parseFloat(document.getElementById('nbStartPh').value) || null,
+    startBrewTemp: parseFloat(document.getElementById('nbStartBrewTemp').value) || null,
     endPh: null,
     f2Flavoring: null,
     f2Sugar: null,
@@ -1982,7 +2263,8 @@ function openCheckForm(batchId) {
   document.getElementById('checkBatchId').value = batchId;
   document.getElementById('checkDate').value = todayStr();
   document.getElementById('checkPh').value = '';
-  document.getElementById('checkTemp').value = getCurrentTemp() != null ? Math.round(getCurrentTemp() * 10) / 10 : '';
+  document.getElementById('checkBrewTemp').value = '';
+  document.getElementById('checkAmbientTemp').value = getCurrentTemp() != null ? Math.round(getCurrentTemp() * 10) / 10 : '';
   document.getElementById('checkTaste').value = '';
   document.getElementById('checkOverlay').classList.add('active');
 }
@@ -1995,7 +2277,9 @@ function saveCheck() {
   const check = {
     date: document.getElementById('checkDate').value || todayStr(),
     ph: parseFloat(document.getElementById('checkPh').value) || null,
-    temp: parseFloat(document.getElementById('checkTemp').value) || null,
+    brewTemp: parseFloat(document.getElementById('checkBrewTemp').value) || null,
+    ambientTemp: parseFloat(document.getElementById('checkAmbientTemp').value) || null,
+    temp: parseFloat(document.getElementById('checkAmbientTemp').value) || parseFloat(document.getElementById('checkBrewTemp').value) || null,
     taste: document.getElementById('checkTaste').value.trim() || null
   };
 
@@ -2098,8 +2382,9 @@ function renderVesselManager() {
   list.innerHTML = vessels.map(v => {
     const hasActive = getActiveBatchForVessel(v._fbKey);
     const batchCount = getBatchesForVessel(v._fbKey).length;
+    const capStr = v.capacityLiters ? ' &middot; ' + v.capacityLiters + 'L' : '';
     return '<div class="vessel-list-item">' +
-      '<span class="vessel-list-name">' + v.name + '</span>' +
+      '<span class="vessel-list-name">' + v.name + '<span class="vessel-capacity">' + capStr + '</span></span>' +
       '<span style="font-size:12px;color:var(--text-light)">' + batchCount + ' batch' + (batchCount !== 1 ? 'es' : '') + '</span>' +
       '<button class="vessel-list-btn" onclick="promptRenameVessel(\'' + v._fbKey + '\',\'' + v.name.replace(/'/g, "\\'") + '\')">Rename</button>' +
       (hasActive ? '' : '<button class="vessel-list-btn delete" onclick="promptDeleteVessel(\'' + v._fbKey + '\',\'' + v.name.replace(/'/g, "\\'") + '\')">Delete</button>') +
@@ -2112,7 +2397,9 @@ function renderVesselManager() {
 function addNewVessel() {
   const name = document.getElementById('newVesselName').value.trim();
   if (!name) { showToast('Enter a name'); return; }
-  addVessel({ name: name });
+  const capacity = parseFloat(document.getElementById('newVesselCapacity').value) || null;
+  addVessel({ name: name, capacityLiters: capacity });
+  document.getElementById('newVesselCapacity').value = '';
   setTimeout(() => renderVesselManager(), 500);
 }
 
@@ -2189,7 +2476,10 @@ function openBatchDetail(batchId) {
   html += '<div class="detail-row"><span class="dl">Starter</span><span class="dv">' + (batch.starterMl || '?') + 'ml</span></div>';
   html += '<div class="detail-row"><span class="dl">Total Volume</span><span class="dv">' + (batch.totalLiters || '?') + 'L</span></div>';
   if (batch.startPh) html += '<div class="detail-row"><span class="dl">Starting pH</span><span class="dv">' + batch.startPh + '</span></div>';
-  if (batch.scobyNotes) html += '<div class="detail-row"><span class="dl">SCOBY</span><span class="dv">' + batch.scobyNotes + '</span></div>';
+  if (batch.startBrewTemp) html += '<div class="detail-row"><span class="dl">Brew Temp</span><span class="dv">' + batch.startBrewTemp + '\u00B0C</span></div>';
+  if (batch.scobyWeightG) html += '<div class="detail-row"><span class="dl">SCOBY Weight</span><span class="dv">' + batch.scobyWeightG + 'g</span></div>';
+  if (batch.scobyHealth) html += '<div class="detail-row"><span class="dl">SCOBY Health</span><span class="dv">' + batch.scobyHealth.charAt(0).toUpperCase() + batch.scobyHealth.slice(1) + '</span></div>';
+  if (batch.scobyNotes) html += '<div class="detail-row"><span class="dl">SCOBY Notes</span><span class="dv">' + batch.scobyNotes + '</span></div>';
   html += '</div>';
 
   // Timeline
@@ -2235,7 +2525,9 @@ function openBatchDetail(batchId) {
       html += '<div class="check-date">' + formatDateShort(c.date) + '</div>';
       html += '<div class="check-info">';
       if (c.ph) html += 'pH: ' + c.ph + ' &nbsp; ';
-      if (c.temp) html += 'Temp: ' + c.temp + '\u00B0C &nbsp; ';
+      if (c.brewTemp) html += 'Brew: ' + c.brewTemp + '\u00B0C &nbsp; ';
+      if (c.ambientTemp) html += 'Ambient: ' + c.ambientTemp + '\u00B0C &nbsp; ';
+      if (!c.brewTemp && !c.ambientTemp && c.temp) html += 'Temp: ' + c.temp + '\u00B0C &nbsp; ';
       html += '</div>';
       if (c.taste) html += '<div class="check-info">' + c.taste + '</div>';
       html += '</div>';
@@ -2290,74 +2582,168 @@ function renderPhChart(batch, phChecks) {
   // Include startPh as first data point if available
   const dataPoints = [];
   if (batch.startPh) {
-    dataPoints.push({ date: batch.f1Start, ph: batch.startPh, day: 0 });
+    dataPoints.push({ date: batch.f1Start, ph: batch.startPh, day: 0, temp: batch.startBrewTemp || null });
   }
   phChecks.forEach(c => {
     const day = daysBetween(batch.f1Start, c.date);
-    dataPoints.push({ date: c.date, ph: c.ph, day: day });
+    dataPoints.push({ date: c.date, ph: c.ph, day: day, temp: c.brewTemp || c.ambientTemp || c.temp || null });
   });
   if (batch.endPh && batch.f1End) {
     const exists = dataPoints.find(d => d.date === batch.f1End);
     if (!exists) {
-      dataPoints.push({ date: batch.f1End, ph: batch.endPh, day: daysBetween(batch.f1Start, batch.f1End) });
+      dataPoints.push({ date: batch.f1End, ph: batch.endPh, day: daysBetween(batch.f1Start, batch.f1End), temp: null });
     }
   }
 
   if (dataPoints.length < 1) return '';
 
+  // Collect temperature data from all checks (even those without pH)
+  const tempPoints = [];
+  if (batch.startBrewTemp) tempPoints.push({ day: 0, temp: batch.startBrewTemp });
+  (batch.checks || []).forEach(c => {
+    const t = c.brewTemp || c.ambientTemp || c.temp;
+    if (t) {
+      const day = daysBetween(batch.f1Start, c.date);
+      tempPoints.push({ day: day, temp: t });
+    }
+  });
+  const hasTemp = tempPoints.length >= 1;
+
   // Chart dimensions
-  const W = 280, H = 100;
-  const padL = 30, padR = 10, padT = 10, padB = 22;
+  const W = 280, H = hasTemp ? 120 : 100;
+  const padL = 30, padR = hasTemp ? 36 : 10, padT = 10, padB = 22;
   const cW = W - padL - padR;
   const cH = H - padT - padB;
 
-  // pH range (inverted - lower pH is "more fermented" so show it going down)
+  // pH range
   const phValues = dataPoints.map(d => d.ph);
   const phMin = Math.floor(Math.min(...phValues) * 2) / 2 - 0.5;
   const phMax = Math.ceil(Math.max(...phValues) * 2) / 2 + 0.5;
-  const dayMax = Math.max(...dataPoints.map(d => d.day), 1);
+  const allDays = [...dataPoints.map(d => d.day), ...tempPoints.map(d => d.day)];
+  const dayMax = Math.max(...allDays, 1);
 
-  function x(day) { return padL + (day / dayMax) * cW; }
-  function y(ph) { return padT + ((phMax - ph) / (phMax - phMin)) * cH; }
+  // Temp range (right axis)
+  let tempMin = 15, tempMax = 35;
+  if (hasTemp) {
+    const tv = tempPoints.map(d => d.temp);
+    tempMin = Math.floor(Math.min(...tv)) - 2;
+    tempMax = Math.ceil(Math.max(...tv)) + 2;
+  }
 
-  let svg = '<div class="ph-chart-container"><h4>pH Over Time</h4>';
+  function xd(day) { return padL + (day / dayMax) * cW; }
+  function yph(ph) { return padT + ((phMax - ph) / (phMax - phMin)) * cH; }
+  function yt(temp) { return padT + ((tempMax - temp) / (tempMax - tempMin)) * cH; }
+
+  let svg = '<div class="ph-chart-container"><h4>pH' + (hasTemp ? ' & Temp' : '') + ' Over Time</h4>';
   svg += '<div class="ph-chart"><svg viewBox="0 0 ' + W + ' ' + H + '">';
 
   // Sweet spot zone (3.0-3.5)
-  const zoneTop = Math.max(y(3.5), padT);
-  const zoneBot = Math.min(y(3.0), padT + cH);
+  const zoneTop = Math.max(yph(3.5), padT);
+  const zoneBot = Math.min(yph(3.0), padT + cH);
   if (zoneBot > zoneTop) {
     svg += '<rect class="ph-chart-zone" x="' + padL + '" y="' + zoneTop + '" width="' + cW + '" height="' + (zoneBot - zoneTop) + '"/>';
     svg += '<text class="ph-chart-zone-label" x="' + (padL + 4) + '" y="' + (zoneTop + 10) + '">sweet spot</text>';
   }
 
-  // Grid lines and labels
+  // Grid lines and pH labels (left axis)
   for (let ph = Math.ceil(phMin); ph <= Math.floor(phMax); ph += 0.5) {
     if (ph === Math.ceil(phMin) || ph % 1 === 0) {
-      const yy = y(ph);
-      svg += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '" stroke="' + '#e5ddd3' + '" stroke-width="0.5" stroke-dasharray="3,3"/>';
+      const yy = yph(ph);
+      svg += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (padL + cW) + '" y2="' + yy + '" stroke="#e5ddd3" stroke-width="0.5" stroke-dasharray="3,3"/>';
       svg += '<text class="ph-chart-label" x="' + (padL - 4) + '" y="' + (yy + 3) + '" text-anchor="end">' + ph.toFixed(1) + '</text>';
+    }
+  }
+
+  // Temp labels (right axis)
+  if (hasTemp) {
+    for (let t = Math.ceil(tempMin / 5) * 5; t <= tempMax; t += 5) {
+      const yy = yt(t);
+      svg += '<text style="font-size:9px;fill:#e8a948;font-weight:600" x="' + (padL + cW + 4) + '" y="' + (yy + 3) + '">' + t + '\u00B0</text>';
     }
   }
 
   // Day labels
   dataPoints.forEach(d => {
-    svg += '<text class="ph-chart-label" x="' + x(d.day) + '" y="' + (H - 2) + '" text-anchor="middle">D' + d.day + '</text>';
+    svg += '<text class="ph-chart-label" x="' + xd(d.day) + '" y="' + (H - 2) + '" text-anchor="middle">D' + d.day + '</text>';
   });
 
-  // Line
+  // Temperature line (dashed, behind pH)
+  if (hasTemp && tempPoints.length > 1) {
+    const tPath = tempPoints.map((d, i) => (i === 0 ? 'M' : 'L') + xd(d.day).toFixed(1) + ',' + yt(d.temp).toFixed(1));
+    svg += '<path class="temp-chart-line" d="' + tPath.join(' ') + '"/>';
+  }
+  if (hasTemp) {
+    tempPoints.forEach(d => {
+      svg += '<circle class="temp-chart-dot" cx="' + xd(d.day).toFixed(1) + '" cy="' + yt(d.temp).toFixed(1) + '" r="2.5"/>';
+    });
+  }
+
+  // pH line
   if (dataPoints.length > 1) {
-    const pathParts = dataPoints.map((d, i) => (i === 0 ? 'M' : 'L') + x(d.day).toFixed(1) + ',' + y(d.ph).toFixed(1));
+    const pathParts = dataPoints.map((d, i) => (i === 0 ? 'M' : 'L') + xd(d.day).toFixed(1) + ',' + yph(d.ph).toFixed(1));
     svg += '<path class="ph-chart-line" d="' + pathParts.join(' ') + '"/>';
   }
 
-  // Dots with pH labels
+  // pH dots with labels
   dataPoints.forEach(d => {
-    svg += '<circle class="ph-chart-dot" cx="' + x(d.day).toFixed(1) + '" cy="' + y(d.ph).toFixed(1) + '" r="3.5"/>';
-    svg += '<text style="font-size:9px;fill:var(--text);font-weight:700" x="' + x(d.day).toFixed(1) + '" y="' + (y(d.ph) - 7).toFixed(1) + '" text-anchor="middle">' + d.ph + '</text>';
+    svg += '<circle class="ph-chart-dot" cx="' + xd(d.day).toFixed(1) + '" cy="' + yph(d.ph).toFixed(1) + '" r="3.5"/>';
+    svg += '<text style="font-size:9px;fill:var(--text);font-weight:700" x="' + xd(d.day).toFixed(1) + '" y="' + (yph(d.ph) - 7).toFixed(1) + '" text-anchor="middle">' + d.ph + '</text>';
   });
 
+  // Legend
+  if (hasTemp) {
+    svg += '<line x1="' + padL + '" y1="' + (H - 14) + '" x2="' + (padL + 12) + '" y2="' + (H - 14) + '" stroke="var(--primary)" stroke-width="2"/>';
+    svg += '<text style="font-size:8px;fill:var(--text-light)" x="' + (padL + 15) + '" y="' + (H - 11) + '">pH</text>';
+    svg += '<line x1="' + (padL + 32) + '" y1="' + (H - 14) + '" x2="' + (padL + 44) + '" y2="' + (H - 14) + '" stroke="#e8a948" stroke-width="2" stroke-dasharray="3,2"/>';
+    svg += '<text style="font-size:8px;fill:var(--text-light)" x="' + (padL + 47) + '" y="' + (H - 11) + '">Temp</text>';
+  }
+
   svg += '</svg></div></div>';
+  return svg;
+}
+
+// Mini sparkline for dashboard cards
+function renderSparkline(batch) {
+  const phChecks = (batch.checks || []).filter(c => c.ph);
+  const dataPoints = [];
+  if (batch.startPh) dataPoints.push({ day: 0, ph: batch.startPh });
+  phChecks.forEach(c => {
+    const day = daysBetween(batch.f1Start, c.date);
+    dataPoints.push({ day: day, ph: c.ph });
+  });
+  if (dataPoints.length < 2) return '';
+
+  const W = 120, H = 28;
+  const padL = 2, padR = 2, padT = 3, padB = 3;
+  const cW = W - padL - padR;
+  const cH = H - padT - padB;
+
+  const phValues = dataPoints.map(d => d.ph);
+  const phMin = Math.min(...phValues) - 0.3;
+  const phMax = Math.max(...phValues) + 0.3;
+  const dayMax = Math.max(...dataPoints.map(d => d.day), 1);
+
+  function xd(day) { return padL + (day / dayMax) * cW; }
+  function yph(ph) { return padT + ((phMax - ph) / (phMax - phMin)) * cH; }
+
+  let svg = '<div class="sparkline-container"><svg viewBox="0 0 ' + W + ' ' + H + '">';
+
+  // Sweet spot zone
+  const zoneTop = Math.max(yph(3.5), padT);
+  const zoneBot = Math.min(yph(3.0), padT + cH);
+  if (zoneBot > zoneTop) {
+    svg += '<rect class="sparkline-zone" x="' + padL + '" y="' + zoneTop + '" width="' + cW + '" height="' + (zoneBot - zoneTop) + '"/>';
+  }
+
+  // Line
+  const pathParts = dataPoints.map((d, i) => (i === 0 ? 'M' : 'L') + xd(d.day).toFixed(1) + ',' + yph(d.ph).toFixed(1));
+  svg += '<path class="sparkline-line" d="' + pathParts.join(' ') + '"/>';
+
+  // Last dot
+  const last = dataPoints[dataPoints.length - 1];
+  svg += '<circle class="sparkline-dot" cx="' + xd(last.day).toFixed(1) + '" cy="' + yph(last.ph).toFixed(1) + '" r="2"/>';
+
+  svg += '</svg></div>';
   return svg;
 }
 
@@ -2436,6 +2822,44 @@ function renderInsights() {
 }
 
 // ═══════════════════════════════════════════════════════
+// RECIPE SCALER
+// ═══════════════════════════════════════════════════════
+const RECIPE_DATA = {
+  black:  { teaBagsPerL: 2, teaGramsPerL: 4, sugarMinPerL: 50, sugarMaxPerL: 70, starterPctMin: 10, starterPctMax: 15, steepMin: 5, steepMax: 10 },
+  green:  { teaBagsPerL: 2, teaGramsPerL: 3, sugarMinPerL: 50, sugarMaxPerL: 60, starterPctMin: 10, starterPctMax: 15, steepMin: 2, steepMax: 3 },
+  oolong: { teaBagsPerL: 2, teaGramsPerL: 3, sugarMinPerL: 50, sugarMaxPerL: 60, starterPctMin: 10, starterPctMax: 15, steepMin: 3, steepMax: 5 },
+  white:  { teaBagsPerL: 2, teaGramsPerL: 3.5, sugarMinPerL: 50, sugarMaxPerL: 60, starterPctMin: 12, starterPctMax: 15, steepMin: 4, steepMax: 7 }
+};
+
+function updateScaler() {
+  const vol = parseFloat(document.getElementById('scalerVolume').value) || 1;
+  const teaType = document.getElementById('scalerTeaType').value;
+  const strength = document.getElementById('scalerStrength').value;
+
+  const r = RECIPE_DATA[teaType] || RECIPE_DATA.black;
+
+  // Strength multiplier
+  const mult = strength === 'mild' ? 0.8 : strength === 'strong' ? 1.2 : 1.0;
+  const sugarMult = strength === 'mild' ? 1.15 : strength === 'strong' ? 0.85 : 1.0;
+
+  const teaBags = Math.round(r.teaBagsPerL * vol * mult);
+  const teaGrams = Math.round(r.teaGramsPerL * vol * mult);
+  const sugarMin = Math.round(r.sugarMinPerL * vol * sugarMult);
+  const sugarMax = Math.round(r.sugarMaxPerL * vol * sugarMult);
+  const starterMin = Math.round(vol * 1000 * r.starterPctMin / 100);
+  const starterMax = Math.round(vol * 1000 * r.starterPctMax / 100);
+  const waterL = Math.round((vol - starterMin / 1000) * 10) / 10;
+
+  const container = document.getElementById('scalerResults');
+  container.innerHTML =
+    '<div class="scaler-result-row"><span class="sr-label">Tea</span><span class="sr-value">' + teaBags + ' bags (or ' + teaGrams + 'g loose)</span></div>' +
+    '<div class="scaler-result-row"><span class="sr-label">Sugar</span><span class="sr-value">' + sugarMin + '-' + sugarMax + 'g</span></div>' +
+    '<div class="scaler-result-row"><span class="sr-label">Starter</span><span class="sr-value">' + starterMin + '-' + starterMax + 'ml</span></div>' +
+    '<div class="scaler-result-row"><span class="sr-label">Water</span><span class="sr-value">~' + waterL + 'L</span></div>' +
+    '<div class="scaler-result-row"><span class="sr-label">Steep</span><span class="sr-value">' + r.steepMin + '-' + r.steepMax + ' min</span></div>';
+}
+
+// ═══════════════════════════════════════════════════════
 // AUTO-REFRESH
 // ═══════════════════════════════════════════════════════
 let refreshInterval;
@@ -2483,6 +2907,9 @@ fetchWeather().then(() => {
 startAutoRefresh();
 startAlertRefresh();
 startWeatherRefresh();
+
+// Init recipe scaler
+updateScaler();
 </script>
 </body>
 </html>
