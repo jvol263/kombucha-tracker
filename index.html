@@ -222,6 +222,163 @@ body {
   border-color: var(--danger);
 }
 
+/* Active Bottles (F2) section */
+.active-bottles-section {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 0 16px 14px;
+}
+.f2-bottle-card {
+  background: #fffdf5;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow);
+  border-left: 5px solid var(--f2);
+}
+.f2-bottle-card .bottle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.f2-bottle-card .bottle-flavoring {
+  font-size: 16px;
+  font-weight: 700;
+}
+.f2-bottle-card .bottle-day-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--f2);
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+.heritage-tag {
+  font-size: 12px;
+  color: var(--text-light);
+  font-style: italic;
+  margin-bottom: 6px;
+}
+
+/* Multi-bottle form */
+.bottle-rows-container {
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--bg);
+}
+.bottle-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.bottle-row:last-child { border-bottom: none; }
+.bottle-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.bottle-row-num {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.remove-bottle-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.add-bottle-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-light);
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.add-bottle-btn:active { background: var(--bg); }
+
+/* F1/F2 badge in history */
+.batch-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.batch-type-badge.f1-badge { background: var(--f1); color: white; }
+.batch-type-badge.f2-badge { background: var(--f2); color: var(--text); }
+
+/* Toggle switch */
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  margin-bottom: 14px;
+}
+.toggle-row label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.toggle-switch {
+  width: 48px;
+  height: 26px;
+  background: var(--border);
+  border-radius: 13px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: none;
+  padding: 0;
+}
+.toggle-switch.on { background: var(--primary); }
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch.on::after { transform: translateX(22px); }
+
+/* F1 ratings in bottle modal */
+.f1-ratings-section {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.f1-ratings-section h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
 /* Section title */
 .section-title {
   font-size: 14px;
@@ -929,6 +1086,10 @@ body {
   <div class="vessel-grid" id="vesselGrid">
     <div class="empty-state">Loading vessels...</div>
   </div>
+  <div class="active-bottles-section" id="activeBottlesSection" style="display:none">
+    <div class="section-title">Active Bottles</div>
+    <div id="activeBottlesGrid"></div>
+  </div>
 </div>
 
 <!-- TAB: History -->
@@ -1260,95 +1421,94 @@ body {
   </div>
 </div>
 
-<!-- MODAL: F2 Transition -->
-<div class="modal-overlay" id="f2Overlay" onclick="if(event.target===this)closeModal('f2Overlay')">
+<!-- MODAL: Bottle This Batch -->
+<div class="modal-overlay" id="bottleOverlay" onclick="if(event.target===this)closeModal('bottleOverlay')">
   <div class="modal">
     <div class="modal-header">
-      <h2>Transition to F2</h2>
-      <button class="modal-close" onclick="closeModal('f2Overlay')">&times;</button>
+      <h2>Bottle This Batch</h2>
+      <button class="modal-close" onclick="closeModal('bottleOverlay')">&times;</button>
     </div>
-    <input type="hidden" id="f2BatchId">
+    <input type="hidden" id="bottleBatchId">
     <div class="form-row">
       <div class="form-group">
         <label>F1 End Date</label>
-        <input type="date" id="f2F1EndDate">
+        <input type="date" id="bottleF1EndDate">
       </div>
       <div class="form-group">
-        <label>F1 Ending pH</label>
-        <input type="number" id="f2EndPh" placeholder="e.g. 3.0" step="0.1" min="0" max="14">
+        <label>Ending pH</label>
+        <input type="number" id="bottleEndPh" placeholder="e.g. 3.0" step="0.1" min="0" max="14">
       </div>
     </div>
-    <div class="form-group">
-      <label>F2 Start Date</label>
-      <input type="date" id="f2StartDate">
-    </div>
-    <div class="form-group">
-      <label>Flavoring</label>
-      <input type="text" id="f2Flavoring" placeholder="e.g. Ginger + Lemon, 50g">
-    </div>
-    <div class="form-row">
+    <div class="f1-ratings-section">
+      <h4>F1 Ratings</h4>
       <div class="form-group">
-        <label>Added Sugar (g)</label>
-        <input type="number" id="f2Sugar" placeholder="e.g. 20" step="5" min="0">
+        <label class="rating-label">Base Quality <span class="rating-value" id="f1BaseQualVal">-</span></label>
+        <div class="rating-group" id="f1BaseQualStars"></div>
+        <input type="hidden" id="bottleBaseQual" value="0">
       </div>
       <div class="form-group">
-        <label>Headspace</label>
-        <select id="f2Headspace">
-          <option value="minimal">Minimal</option>
-          <option value="moderate">Moderate</option>
-          <option value="generous">Generous</option>
-        </select>
+        <label class="rating-label">Balance <span class="rating-value" id="f1BalanceVal">-</span></label>
+        <div class="rating-group" id="f1BalanceStars"></div>
+        <input type="hidden" id="bottleBalance" value="0">
+      </div>
+      <div class="form-group">
+        <label class="rating-label">SCOBY Assessment <span class="rating-value" id="f1ScobyVal">-</span></label>
+        <div class="rating-group" id="f1ScobyStars"></div>
+        <input type="hidden" id="bottleScoby" value="0">
       </div>
     </div>
-    <div class="form-group">
-      <label>Notes</label>
-      <textarea id="f2Notes" placeholder="Bottling observations..."></textarea>
+    <label style="display:block;font-size:13px;font-weight:600;color:var(--text-light);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">F2 Bottles</label>
+    <div class="bottle-rows-container" id="bottleRowsContainer"></div>
+    <button class="add-bottle-btn" id="addBottleBtn" onclick="addBottleRow()">+ Add Bottle</button>
+    <div class="toggle-row">
+      <label>Start new F1 immediately?</label>
+      <button class="toggle-switch on" id="newF1Toggle" onclick="toggleNewF1()"></button>
     </div>
-    <button class="submit-btn f2-btn" onclick="saveF2Transition()">Start F2</button>
+    <button class="submit-btn f2-btn" onclick="saveBottling()">Bottle &amp; Complete F1</button>
   </div>
 </div>
 
-<!-- MODAL: Completion / Rating -->
-<div class="modal-overlay" id="completeOverlay" onclick="if(event.target===this)closeModal('completeOverlay')">
+<!-- MODAL: Complete F2 Bottle -->
+<div class="modal-overlay" id="completeF2Overlay" onclick="if(event.target===this)closeModal('completeF2Overlay')">
   <div class="modal">
     <div class="modal-header">
-      <h2>Rate This Batch</h2>
-      <button class="modal-close" onclick="closeModal('completeOverlay')">&times;</button>
+      <h2>Complete F2 Bottle</h2>
+      <button class="modal-close" onclick="closeModal('completeF2Overlay')">&times;</button>
     </div>
-    <input type="hidden" id="compBatchId">
+    <input type="hidden" id="compF2Id">
     <div class="form-group">
       <label>Completion Date</label>
-      <input type="date" id="compDate">
+      <input type="date" id="compF2Date">
     </div>
     <div class="form-group">
-      <label class="rating-label">Carbonation <span class="rating-value" id="carbVal">-</span></label>
-      <div class="rating-group" id="carbStars"></div>
-      <input type="hidden" id="compCarb" value="0">
+      <label class="rating-label">Carbonation <span class="rating-value" id="f2CarbVal">-</span></label>
+      <div class="rating-group" id="f2CarbStars"></div>
+      <input type="hidden" id="compF2Carb" value="0">
     </div>
     <div class="form-group">
-      <label class="rating-label">Sweetness <span class="rating-value" id="sweetVal">-</span></label>
-      <div class="rating-group" id="sweetStars"></div>
-      <input type="hidden" id="compSweet" value="0">
+      <label class="rating-label">Flavor Intensity <span class="rating-value" id="f2FlavorVal">-</span></label>
+      <div class="rating-group" id="f2FlavorStars"></div>
+      <input type="hidden" id="compF2Flavor" value="0">
     </div>
     <div class="form-group">
-      <label class="rating-label">Tartness <span class="rating-value" id="tartVal">-</span></label>
-      <div class="rating-group" id="tartStars"></div>
-      <input type="hidden" id="compTart" value="0">
+      <label class="rating-label">Sweetness <span class="rating-value" id="f2SweetVal">-</span></label>
+      <div class="rating-group" id="f2SweetStars"></div>
+      <input type="hidden" id="compF2Sweet" value="0">
     </div>
     <div class="form-group">
-      <label class="rating-label">Overall Quality <span class="rating-value" id="overallVal">-</span></label>
-      <div class="rating-group" id="overallStars"></div>
-      <input type="hidden" id="compOverall" value="0">
+      <label class="rating-label">Overall <span class="rating-value" id="f2OverallVal">-</span></label>
+      <div class="rating-group" id="f2OverallStars"></div>
+      <input type="hidden" id="compF2Overall" value="0">
     </div>
     <div class="form-group">
       <label>Flavor Notes</label>
-      <textarea id="compFlavorNotes" placeholder="Describe the taste..."></textarea>
+      <textarea id="compF2FlavorNotes" placeholder="Describe the taste..."></textarea>
     </div>
     <div class="form-group">
       <label>What to Change Next Time</label>
-      <textarea id="compNextTime" placeholder="More sugar? Different tea? Longer F2?"></textarea>
+      <textarea id="compF2NextTime" placeholder="More sugar? Different flavoring? Longer F2?"></textarea>
     </div>
-    <button class="submit-btn complete-btn" onclick="saveCompletion()">Complete Batch</button>
+    <button class="submit-btn complete-btn" onclick="saveF2Completion()">Complete Bottle</button>
   </div>
 </div>
 
@@ -1420,6 +1580,7 @@ const DB = FIREBASE_URL + '/' + SECRET_PATH;
 // ═══════════════════════════════════════════════════════
 let vesselsCache = [];
 let batchesCache = [];
+let f2batchesCache = [];
 let isSyncing = false;
 
 // ═══════════════════════════════════════════════════════
@@ -1687,13 +1848,15 @@ async function syncFromCloud() {
   isSyncing = true;
   setSyncStatus('loading', 'Syncing...');
   try {
-    const [vRes, bRes] = await Promise.all([
+    const [vRes, bRes, f2Res] = await Promise.all([
       fetch(DB + '/vessels.json'),
-      fetch(DB + '/batches.json')
+      fetch(DB + '/batches.json'),
+      fetch(DB + '/f2batches.json')
     ]);
-    if (!vRes.ok || !bRes.ok) throw new Error('HTTP error');
+    if (!vRes.ok || !bRes.ok || !f2Res.ok) throw new Error('HTTP error');
     const vData = await vRes.json();
     const bData = await bRes.json();
+    const f2Data = await f2Res.json();
 
     if (vData) {
       vesselsCache = Object.entries(vData).map(([fbKey, val]) => { val._fbKey = fbKey; return val; });
@@ -1707,6 +1870,12 @@ async function syncFromCloud() {
       batchesCache = [];
     }
 
+    if (f2Data) {
+      f2batchesCache = Object.entries(f2Data).map(([fbKey, val]) => { val._fbKey = fbKey; return val; });
+    } else {
+      f2batchesCache = [];
+    }
+
     // Seed default vessels on first load
     if (vesselsCache.length === 0) {
       await seedDefaultVessels();
@@ -1714,9 +1883,11 @@ async function syncFromCloud() {
 
     localStorage.setItem('kb_vessels', JSON.stringify(vesselsCache));
     localStorage.setItem('kb_batches', JSON.stringify(batchesCache));
+    localStorage.setItem('kb_f2batches', JSON.stringify(f2batchesCache));
 
     setSyncStatus('ok', 'Synced just now');
     renderDashboard();
+    renderActiveBottles();
     renderHistory();
     checkAlerts();
   } catch (err) {
@@ -1724,10 +1895,13 @@ async function syncFromCloud() {
     // Try loading from localStorage
     const lv = localStorage.getItem('kb_vessels');
     const lb = localStorage.getItem('kb_batches');
+    const lf2 = localStorage.getItem('kb_f2batches');
     if (lv) try { vesselsCache = JSON.parse(lv); } catch(e) {}
     if (lb) try { batchesCache = JSON.parse(lb); } catch(e) {}
+    if (lf2) try { f2batchesCache = JSON.parse(lf2); } catch(e) {}
     setSyncStatus('error', 'Sync failed');
     renderDashboard();
+    renderActiveBottles();
     renderHistory();
   }
   isSyncing = false;
@@ -1759,6 +1933,7 @@ async function addBatch(batch) {
   batch.createdAt = new Date().toISOString();
   batchesCache.push(batch);
   renderDashboard();
+  renderActiveBottles();
 
   try {
     const res = await fetch(DB + '/batches.json', {
@@ -1784,6 +1959,7 @@ async function updateBatch(id, updatedData) {
   if (!batch) return;
   Object.assign(batch, updatedData);
   renderDashboard();
+  renderActiveBottles();
   renderHistory();
 
   if (batch._fbKey) {
@@ -1809,6 +1985,7 @@ async function deleteBatch(id) {
   if (!batch) return;
   batchesCache = batchesCache.filter(b => b.id !== id);
   renderDashboard();
+  renderActiveBottles();
   renderHistory();
 
   if (batch._fbKey) {
@@ -1824,12 +2001,85 @@ async function deleteBatch(id) {
   }
 }
 
+// ═══════════════════════════════════════════════════════
+// F2 BATCH CRUD
+// ═══════════════════════════════════════════════════════
+async function addF2Batch(f2batch) {
+  f2batch.id = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  f2batch.createdAt = new Date().toISOString();
+  f2batchesCache.push(f2batch);
+  renderActiveBottles();
+
+  try {
+    const res = await fetch(DB + '/f2batches.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(f2batch)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const result = await res.json();
+    f2batch._fbKey = result.name;
+    localStorage.setItem('kb_f2batches', JSON.stringify(f2batchesCache));
+    setSyncStatus('ok', 'Synced just now');
+  } catch (err) {
+    console.error('F2 save failed:', err);
+    showToast('F2 save failed');
+    setSyncStatus('error', 'Save failed');
+  }
+}
+
+async function updateF2Batch(id, updatedData) {
+  const f2b = f2batchesCache.find(b => b.id === id);
+  if (!f2b) return;
+  Object.assign(f2b, updatedData);
+  renderActiveBottles();
+  renderHistory();
+
+  if (f2b._fbKey) {
+    try {
+      await fetch(DB + '/f2batches/' + f2b._fbKey + '.json', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+      });
+      localStorage.setItem('kb_f2batches', JSON.stringify(f2batchesCache));
+      showToast('Updated');
+      setSyncStatus('ok', 'Synced just now');
+    } catch (err) {
+      console.error('F2 update failed:', err);
+      showToast('Update failed');
+      setSyncStatus('error', 'Update failed');
+    }
+  }
+}
+
+async function deleteF2Batch(id) {
+  const f2b = f2batchesCache.find(b => b.id === id);
+  if (!f2b) return;
+  f2batchesCache = f2batchesCache.filter(b => b.id !== id);
+  renderActiveBottles();
+  renderHistory();
+
+  if (f2b._fbKey) {
+    try {
+      await fetch(DB + '/f2batches/' + f2b._fbKey + '.json', { method: 'DELETE' });
+      localStorage.setItem('kb_f2batches', JSON.stringify(f2batchesCache));
+      showToast('F2 batch deleted');
+      setSyncStatus('ok', 'Synced just now');
+    } catch (err) {
+      console.error('F2 delete failed:', err);
+      setSyncStatus('error', 'Delete failed');
+    }
+  }
+}
+
 async function addVessel(vessel) {
   vessel.id = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
   vessel.createdAt = new Date().toISOString();
   vessel.active = true;
   vesselsCache.push(vessel);
   renderDashboard();
+  renderActiveBottles();
 
   try {
     const res = await fetch(DB + '/vessels.json', {
@@ -1857,6 +2107,7 @@ async function removeVessel(fbKey) {
   }
   vesselsCache = vesselsCache.filter(v => v._fbKey !== fbKey);
   renderDashboard();
+  renderActiveBottles();
 
   try {
     await fetch(DB + '/vessels/' + fbKey + '.json', { method: 'DELETE' });
@@ -1870,6 +2121,7 @@ async function renameVessel(fbKey, newName) {
   if (!vessel) return;
   vessel.name = newName;
   renderDashboard();
+  renderActiveBottles();
 
   try {
     await fetch(DB + '/vessels/' + fbKey + '.json', {
@@ -1885,15 +2137,35 @@ async function renameVessel(fbKey, newName) {
 // DATA HELPERS
 // ═══════════════════════════════════════════════════════
 function getActiveBatchForVessel(vesselFbKey) {
-  return batchesCache.find(b => b.vesselId === vesselFbKey && (b.status === 'f1_active' || b.status === 'f2_active'));
+  return batchesCache.find(b => b.vesselId === vesselFbKey && b.status === 'f1_active');
+}
+
+function getActiveF2Batches() {
+  return f2batchesCache
+    .filter(b => b.status === 'f2_active')
+    .sort((a, b) => (a.f2Start || '').localeCompare(b.f2Start || ''));
+}
+
+function getCompletedF2Batches() {
+  return f2batchesCache
+    .filter(b => b.status === 'completed')
+    .sort((a, b) => {
+      const da = b.f2End || b.f2Start;
+      const db = a.f2End || a.f2Start;
+      return (da || '').localeCompare(db || '');
+    });
+}
+
+function getF2BatchesForParent(parentBatchId) {
+  return f2batchesCache.filter(b => b.parentBatchId === parentBatchId);
 }
 
 function getCompletedBatches() {
   return batchesCache
     .filter(b => b.status === 'completed')
     .sort((a, b) => {
-      const da = a.f2End || a.f1End || a.f1Start;
-      const db = b.f2End || b.f1End || b.f1Start;
+      const da = a.completedDate || a.f1End || a.f1Start;
+      const db = b.completedDate || b.f1End || b.f1Start;
       return (db || '').localeCompare(da || '');
     });
 }
@@ -2104,24 +2376,8 @@ function renderDashboard() {
           '<div class="progress-bar-container"><div class="progress-bar' + barClass + '" style="width:' + progressPct + '%"></div></div>';
 
         actions = '<button class="vessel-action" onclick="openCheckForm(\'' + activeBatch.id + '\')">Check</button>' +
-          '<button class="vessel-action primary" onclick="openF2TransitionForm(\'' + activeBatch.id + '\')">Start F2</button>';
+          '<button class="vessel-action primary" onclick="openBottleForm(\'' + activeBatch.id + '\')">Bottle</button>';
 
-      } else if (activeBatch.status === 'f2_active') {
-        const f2Days = activeBatch.f2Start ? daysSince(activeBatch.f2Start) : 0;
-        let barClass = ' f2';
-        let progressPct = Math.min(100, Math.round((f2Days / 4) * 100));
-
-        if (f2Days >= 4) { statusClass = 'check-soon'; statusBadge = '<span class="status-badge check-soon">F2 Check</span>'; }
-        else { statusClass = 'f2-active'; statusBadge = '<span class="status-badge f2">F2 Active</span>'; }
-
-        cardContent = '<div class="vessel-info">' +
-          '<div class="info-row"><span class="dl">' + teaEmoji(activeBatch.teaType) + ' ' + teaLabel(activeBatch.teaType) + '</span><span class="info-label">F2 Day ' + f2Days + '</span></div>' +
-          (activeBatch.f2Flavoring ? '<div class="info-row"><span class="dl">Flavoring: ' + activeBatch.f2Flavoring + '</span></div>' : '') +
-          '<div class="info-row"><span class="dl">Started F2 ' + formatDateShort(activeBatch.f2Start) + '</span></div>' +
-          '</div>' +
-          '<div class="progress-bar-container"><div class="progress-bar' + barClass + '" style="width:' + progressPct + '%"></div></div>';
-
-        actions = '<button class="vessel-action primary" onclick="openCompletionForm(\'' + activeBatch.id + '\')">Complete</button>';
       }
     } else {
       cardContent = '<div class="vessel-info"><div class="info-row"><span class="dl">No active brew</span></div></div>';
@@ -2137,34 +2393,81 @@ function renderDashboard() {
 }
 
 // ═══════════════════════════════════════════════════════
+// ACTIVE BOTTLES (F2) RENDERING
+// ═══════════════════════════════════════════════════════
+function renderActiveBottles() {
+  const section = document.getElementById('activeBottlesSection');
+  const grid = document.getElementById('activeBottlesGrid');
+  if (!section || !grid) return;
+  const active = getActiveF2Batches();
+
+  if (active.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  section.querySelector('.section-title').textContent = 'Active Bottles (' + active.length + ')';
+
+  grid.innerHTML = active.map(f2b => {
+    const f2Days = f2b.f2Start ? daysSince(f2b.f2Start) : 0;
+    const progressPct = Math.min(100, Math.round((f2Days / 4) * 100));
+    const info = f2b.parentBatchInfo || {};
+    const heritage = 'from ' + (info.vesselName || '?') + ', ' + teaLabel(info.teaType) + ', ' + formatDateShort(info.f1Start);
+    const barClass = f2Days >= 4 ? ' check-soon' : ' f2';
+
+    return '<div class="f2-bottle-card">' +
+      '<div class="bottle-header">' +
+        '<span class="bottle-flavoring">' + (f2b.flavoring || 'Unflavored') + '</span>' +
+        '<span class="bottle-day-badge">F2 Day ' + f2Days + '</span>' +
+      '</div>' +
+      '<div class="heritage-tag">' + heritage + '</div>' +
+      (f2b.volumeMl ? '<div style="font-size:12px;color:var(--text-light);margin-bottom:4px">' + f2b.volumeMl + 'ml' + (f2b.sugarG ? ' \u00B7 +' + f2b.sugarG + 'g sugar' : '') + '</div>' : '') +
+      '<div class="progress-bar-container"><div class="progress-bar' + barClass + '" style="width:' + progressPct + '%"></div></div>' +
+      '<div class="vessel-actions">' +
+        '<button class="vessel-action primary" onclick="openCompleteF2Form(\'' + f2b.id + '\')">Complete</button>' +
+        '<button class="vessel-action" onclick="openF2Detail(\'' + f2b.id + '\')">Details</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function scrollToActiveBottles() {
+  const el = document.getElementById('activeBottlesSection');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ═══════════════════════════════════════════════════════
 // ALERT SYSTEM
 // ═══════════════════════════════════════════════════════
 function checkAlerts() {
   const today = new Date(); today.setHours(0,0,0,0);
-  const activeBatches = batchesCache.filter(b => b.status === 'f1_active' || b.status === 'f2_active');
+  const activeBatches = batchesCache.filter(b => b.status === 'f1_active');
   const alerts = [];
 
   activeBatches.forEach(batch => {
     const vessel = vesselsCache.find(v => v._fbKey === batch.vesselId);
     const vName = vessel ? vessel.name : 'Vessel';
 
-    if (batch.status === 'f1_active') {
-      const estReady = calculateEstimatedReadyDate(batch);
-      const dl = daysUntil(estReady);
-      if (dl < 0) {
-        alerts.push({ type: 'overdue', msg: vName + ' F1 may be overdue by ' + Math.abs(dl) + ' day' + (Math.abs(dl) !== 1 ? 's' : '') + '!', batchId: batch.id });
-      } else if (dl <= 2) {
-        alerts.push({ type: 'check-soon', msg: vName + ' F1 approaching ready (' + dl + ' day' + (dl !== 1 ? 's' : '') + ')', batchId: batch.id });
-      }
+    const estReady = calculateEstimatedReadyDate(batch);
+    const dl = daysUntil(estReady);
+    if (dl < 0) {
+      alerts.push({ type: 'overdue', msg: vName + ' F1 may be overdue by ' + Math.abs(dl) + ' day' + (Math.abs(dl) !== 1 ? 's' : '') + '!', batchId: batch.id });
+    } else if (dl <= 2) {
+      alerts.push({ type: 'check-soon', msg: vName + ' F1 approaching ready (' + dl + ' day' + (dl !== 1 ? 's' : '') + ')', batchId: batch.id });
     }
+  });
 
-    if (batch.status === 'f2_active' && batch.f2Start) {
-      const f2Days = daysSince(batch.f2Start);
-      if (f2Days >= 4) {
-        alerts.push({ type: 'overdue', msg: vName + ' F2 has been going ' + f2Days + ' days - check carbonation!', batchId: batch.id });
-      } else if (f2Days >= 2) {
-        alerts.push({ type: 'check-soon', msg: vName + ' F2 day ' + f2Days + ' - may want to check', batchId: batch.id });
-      }
+  // F2 bottle alerts (from separate collection)
+  const activeF2 = getActiveF2Batches();
+  activeF2.forEach(f2b => {
+    const info = f2b.parentBatchInfo || {};
+    const label = (f2b.flavoring || 'Bottle') + ' (' + (info.vesselName || '?') + ')';
+    const f2Days = f2b.f2Start ? daysSince(f2b.f2Start) : 0;
+    if (f2Days >= 4) {
+      alerts.push({ type: 'overdue', msg: label + ' F2 has been going ' + f2Days + ' days - check carbonation!', f2Id: f2b.id });
+    } else if (f2Days >= 2) {
+      alerts.push({ type: 'check-soon', msg: label + ' F2 day ' + f2Days + ' - may want to check', f2Id: f2b.id });
     }
   });
 
@@ -2173,6 +2476,9 @@ function checkAlerts() {
   container.innerHTML = alerts.map(a => {
     const cls = a.type === 'overdue' ? 'alert-banner alert-red' : 'alert-banner alert-yellow';
     const icon = a.type === 'overdue' ? '\u26A0\uFE0F' : '\uD83D\uDD0D';
+    if (a.f2Id) {
+      return '<div class="' + cls + '" onclick="scrollToActiveBottles()">' + icon + ' ' + a.msg + '</div>';
+    }
     return '<div class="' + cls + '" onclick="openCheckForm(\'' + a.batchId + '\')">' + icon + ' ' + a.msg + '</div>';
   }).join('');
 }
@@ -2222,8 +2528,7 @@ function saveNewBatch() {
     status: 'f1_active',
     f1Start: document.getElementById('nbDate').value || todayStr(),
     f1End: null,
-    f2Start: null,
-    f2End: null,
+    completedDate: null,
     teaType: document.getElementById('nbTeaType').value,
     teaAmount: parseFloat(document.getElementById('nbTeaAmount').value) || null,
     teaUnit: document.getElementById('nbTeaUnit').value,
@@ -2238,12 +2543,7 @@ function saveNewBatch() {
     startPh: parseFloat(document.getElementById('nbStartPh').value) || null,
     startBrewTemp: parseFloat(document.getElementById('nbStartBrewTemp').value) || null,
     endPh: null,
-    f2Flavoring: null,
-    f2Sugar: null,
-    f2BottleHeadspace: null,
-    ratings: null,
-    flavorNotes: null,
-    nextTimeNotes: null,
+    f1Ratings: null,
     checks: [],
     notes: document.getElementById('nbNotes').value.trim() || null
   };
@@ -2290,80 +2590,233 @@ function saveCheck() {
 }
 
 // ═══════════════════════════════════════════════════════
-// F2 TRANSITION FORM
+// BOTTLE FORM (replaces F2 Transition)
 // ═══════════════════════════════════════════════════════
-function openF2TransitionForm(batchId) {
+let bottleRowCount = 0;
+
+function addBottleRow() {
+  bottleRowCount++;
+  const num = bottleRowCount;
+  const container = document.getElementById('bottleRowsContainer');
+  const row = document.createElement('div');
+  row.className = 'bottle-row';
+  row.id = 'bottleRow' + num;
+  row.innerHTML =
+    '<div class="bottle-row-header"><span class="bottle-row-num">Bottle ' + num + '</span>' +
+    (num > 1 ? '<button class="remove-bottle-btn" onclick="removeBottleRow(' + num + ')">&times;</button>' : '') +
+    '</div>' +
+    '<div class="form-row">' +
+      '<div class="form-group" style="flex:2"><label>Flavoring</label><input type="text" id="bFlav' + num + '" placeholder="e.g. Ginger + Lemon"></div>' +
+      '<div class="form-group" style="flex:1"><label>Volume (ml)</label><input type="number" id="bVol' + num + '" placeholder="500"></div>' +
+    '</div>' +
+    '<div class="form-row">' +
+      '<div class="form-group"><label>Sugar (g)</label><input type="number" id="bSug' + num + '" step="0.1" placeholder="5"></div>' +
+      '<div class="form-group"><label>Headspace</label><select id="bHead' + num + '"><option value="minimal">Minimal</option><option value="moderate" selected>Moderate</option><option value="generous">Generous</option></select></div>' +
+    '</div>';
+  container.appendChild(row);
+  updateAddBottleBtn();
+}
+
+function removeBottleRow(num) {
+  const row = document.getElementById('bottleRow' + num);
+  if (row) row.remove();
+  renumberBottleRows();
+  updateAddBottleBtn();
+}
+
+function renumberBottleRows() {
+  const container = document.getElementById('bottleRowsContainer');
+  const rows = container.querySelectorAll('.bottle-row');
+  bottleRowCount = rows.length;
+  rows.forEach((row, idx) => {
+    const n = idx + 1;
+    row.querySelector('.bottle-row-num').textContent = 'Bottle ' + n;
+  });
+}
+
+function updateAddBottleBtn() {
+  const btn = document.getElementById('addBottleBtn');
+  if (bottleRowCount >= 4) {
+    btn.style.display = 'none';
+  } else {
+    btn.style.display = 'block';
+  }
+}
+
+function openBottleForm(batchId) {
   const batch = batchesCache.find(b => b.id === batchId);
   if (!batch) return;
 
-  document.getElementById('f2BatchId').value = batchId;
-  document.getElementById('f2F1EndDate').value = todayStr();
-  document.getElementById('f2EndPh').value = '';
-  document.getElementById('f2StartDate').value = todayStr();
-  document.getElementById('f2Flavoring').value = '';
-  document.getElementById('f2Sugar').value = '';
-  document.getElementById('f2Headspace').value = 'minimal';
-  document.getElementById('f2Notes').value = '';
-  document.getElementById('f2Overlay').classList.add('active');
+  document.getElementById('bottleBatchId').value = batchId;
+  document.getElementById('bottleF1EndDate').value = todayStr();
+  document.getElementById('bottleEndPh').value = '';
+
+  // Setup F1 star ratings
+  setupStarRating('f1BaseQualStars', 'bottleBaseQual', 'f1BaseQualVal', 5);
+  setupStarRating('f1BalanceStars', 'bottleBalance', 'f1BalanceVal', 5);
+  setupStarRating('f1ScobyStars', 'bottleScoby', 'f1ScobyVal', 5);
+
+  // Reset bottle rows
+  document.getElementById('bottleRowsContainer').innerHTML = '';
+  bottleRowCount = 0;
+  addBottleRow(); // Start with one bottle
+
+  // Reset toggle to "on"
+  const toggle = document.getElementById('newF1Toggle');
+  toggle.classList.add('on');
+
+  document.getElementById('bottleOverlay').classList.add('active');
 }
 
-function saveF2Transition() {
-  const batchId = document.getElementById('f2BatchId').value;
+function toggleNewF1() {
+  const toggle = document.getElementById('newF1Toggle');
+  toggle.classList.toggle('on');
+}
 
-  const updates = {
-    status: 'f2_active',
-    f1End: document.getElementById('f2F1EndDate').value || todayStr(),
-    endPh: parseFloat(document.getElementById('f2EndPh').value) || null,
-    f2Start: document.getElementById('f2StartDate').value || todayStr(),
-    f2Flavoring: document.getElementById('f2Flavoring').value.trim() || null,
-    f2Sugar: parseFloat(document.getElementById('f2Sugar').value) || null,
-    f2BottleHeadspace: document.getElementById('f2Headspace').value,
-    f2Notes: document.getElementById('f2Notes').value.trim() || null
+function saveBottling() {
+  const batchId = document.getElementById('bottleBatchId').value;
+  const batch = batchesCache.find(b => b.id === batchId);
+  if (!batch) return;
+
+  const f1EndDate = document.getElementById('bottleF1EndDate').value || todayStr();
+  const endPh = parseFloat(document.getElementById('bottleEndPh').value) || null;
+  const f1Ratings = {
+    baseQuality: parseInt(document.getElementById('bottleBaseQual').value) || 0,
+    balance: parseInt(document.getElementById('bottleBalance').value) || 0,
+    scobyAssessment: parseInt(document.getElementById('bottleScoby').value) || 0
   };
 
-  updateBatch(batchId, updates);
-  closeModal('f2Overlay');
+  // Collect bottle rows
+  const container = document.getElementById('bottleRowsContainer');
+  const rows = container.querySelectorAll('.bottle-row');
+  const bottles = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input, select');
+    const flavoring = inputs[0] ? inputs[0].value.trim() : '';
+    const volumeMl = inputs[1] ? parseFloat(inputs[1].value) || null : null;
+    const sugarG = inputs[2] ? parseFloat(inputs[2].value) || null : null;
+    const headspace = inputs[3] ? inputs[3].value : 'moderate';
+    bottles.push({ flavoring: flavoring || null, volumeMl, sugarG, headspace });
+  });
+
+  if (bottles.length === 0) {
+    showToast('Add at least one bottle');
+    return;
+  }
+
+  // 1. Complete F1 batch
+  const f1Updates = {
+    status: 'completed',
+    f1End: f1EndDate,
+    endPh: endPh,
+    completedDate: f1EndDate,
+    f1Ratings: f1Ratings
+  };
+  updateBatch(batchId, f1Updates);
+
+  // 2. Create F2 batches
+  const parentInfo = {
+    vesselName: batch.vesselName,
+    teaType: batch.teaType,
+    f1Start: batch.f1Start,
+    f1End: f1EndDate,
+    endPh: endPh
+  };
+  bottles.forEach(bottle => {
+    const f2Batch = {
+      parentBatchId: batchId,
+      parentBatchInfo: parentInfo,
+      f2Start: f1EndDate,
+      f2End: null,
+      flavoring: bottle.flavoring,
+      sugarG: bottle.sugarG,
+      headspace: bottle.headspace,
+      volumeMl: bottle.volumeMl,
+      status: 'f2_active',
+      ratings: null,
+      flavorNotes: null,
+      nextTimeNotes: null,
+      notes: null,
+      createdAt: new Date().toISOString()
+    };
+    addF2Batch(f2Batch);
+  });
+
+  // 3. Optionally start new F1
+  const startNewF1 = document.getElementById('newF1Toggle').classList.contains('on');
+  if (startNewF1) {
+    const newBatch = {
+      vesselId: batch.vesselId,
+      vesselName: batch.vesselName,
+      status: 'f1_active',
+      f1Start: f1EndDate,
+      f1End: null,
+      completedDate: null,
+      teaType: batch.teaType,
+      teaAmount: batch.teaAmount,
+      teaUnit: batch.teaUnit,
+      sugarGrams: batch.sugarGrams,
+      sugarType: batch.sugarType,
+      waterLiters: batch.waterLiters,
+      starterMl: batch.starterMl,
+      totalLiters: batch.totalLiters,
+      scobyNotes: null,
+      scobyWeightG: batch.scobyWeightG,
+      scobyHealth: batch.scobyHealth,
+      startPh: null,
+      startBrewTemp: null,
+      endPh: null,
+      f1Ratings: null,
+      checks: [],
+      notes: null
+    };
+    addBatch(newBatch);
+  }
+
+  closeModal('bottleOverlay');
+  showToast('Bottled! ' + bottles.length + ' F2 bottle' + (bottles.length > 1 ? 's' : '') + ' created' + (startNewF1 ? ' + new F1 started' : ''));
   checkAlerts();
 }
 
 // ═══════════════════════════════════════════════════════
-// COMPLETION / RATING FORM
+// F2 COMPLETION FORM
 // ═══════════════════════════════════════════════════════
-function openCompletionForm(batchId) {
-  const batch = batchesCache.find(b => b.id === batchId);
-  if (!batch) return;
+function openCompleteF2Form(f2Id) {
+  const f2b = f2batchesCache.find(b => b.id === f2Id);
+  if (!f2b) return;
 
-  document.getElementById('compBatchId').value = batchId;
-  document.getElementById('compDate').value = todayStr();
-  document.getElementById('compFlavorNotes').value = '';
-  document.getElementById('compNextTime').value = '';
+  document.getElementById('compF2Id').value = f2Id;
+  document.getElementById('compF2Date').value = todayStr();
+  document.getElementById('compF2FlavorNotes').value = '';
+  document.getElementById('compF2NextTime').value = '';
 
-  setupStarRating('carbStars', 'compCarb', 'carbVal', 5);
-  setupStarRating('sweetStars', 'compSweet', 'sweetVal', 5);
-  setupStarRating('tartStars', 'compTart', 'tartVal', 5);
-  setupStarRating('overallStars', 'compOverall', 'overallVal', 5);
+  setupStarRating('f2CarbStars', 'compF2Carb', 'f2CarbVal', 5);
+  setupStarRating('f2FlavorStars', 'compF2Flavor', 'f2FlavorVal', 5);
+  setupStarRating('f2SweetStars', 'compF2Sweet', 'f2SweetVal', 5);
+  setupStarRating('f2OverallStars', 'compF2Overall', 'f2OverallVal', 5);
 
-  document.getElementById('completeOverlay').classList.add('active');
+  document.getElementById('completeF2Overlay').classList.add('active');
 }
 
-function saveCompletion() {
-  const batchId = document.getElementById('compBatchId').value;
+function saveF2Completion() {
+  const f2Id = document.getElementById('compF2Id').value;
 
   const updates = {
     status: 'completed',
-    f2End: document.getElementById('compDate').value || todayStr(),
+    f2End: document.getElementById('compF2Date').value || todayStr(),
     ratings: {
-      carbonation: parseInt(document.getElementById('compCarb').value) || 0,
-      sweetness: parseInt(document.getElementById('compSweet').value) || 0,
-      tartness: parseInt(document.getElementById('compTart').value) || 0,
-      overall: parseInt(document.getElementById('compOverall').value) || 0
+      carbonation: parseInt(document.getElementById('compF2Carb').value) || 0,
+      flavorIntensity: parseInt(document.getElementById('compF2Flavor').value) || 0,
+      sweetness: parseInt(document.getElementById('compF2Sweet').value) || 0,
+      overall: parseInt(document.getElementById('compF2Overall').value) || 0
     },
-    flavorNotes: document.getElementById('compFlavorNotes').value.trim() || null,
-    nextTimeNotes: document.getElementById('compNextTime').value.trim() || null
+    flavorNotes: document.getElementById('compF2FlavorNotes').value.trim() || null,
+    nextTimeNotes: document.getElementById('compF2NextTime').value.trim() || null
   };
 
-  updateBatch(batchId, updates);
-  closeModal('completeOverlay');
+  updateF2Batch(f2Id, updates);
+  closeModal('completeF2Overlay');
+  showToast('F2 bottle completed!');
   checkAlerts();
 }
 
@@ -2424,27 +2877,58 @@ async function promptDeleteVessel(fbKey, name) {
 // ═══════════════════════════════════════════════════════
 function renderHistory() {
   const container = document.getElementById('historyTimeline');
-  const completed = getCompletedBatches();
+  const completedF1 = getCompletedBatches();
+  const completedF2 = getCompletedF2Batches();
 
-  if (completed.length === 0) {
+  if (completedF1.length === 0 && completedF2.length === 0) {
     container.innerHTML = '<div class="empty-state">No completed batches yet. Finish a brew to see it here.</div>';
     return;
   }
 
-  container.innerHTML = completed.map(batch => {
-    const f1Days = batch.f1End && batch.f1Start ? daysBetween(batch.f1Start, batch.f1End) : null;
-    const totalDays = batch.f2End && batch.f1Start ? daysBetween(batch.f1Start, batch.f2End) : (f1Days || '?');
-    const overall = batch.ratings ? batch.ratings.overall : 0;
-    const iconClass = 'tea-' + (batch.teaType || 'black');
+  // Merge F1 and F2 into a single sorted list
+  const entries = [];
+  completedF1.forEach(b => {
+    const endDate = b.completedDate || b.f1End || b.f1Start;
+    const f1Days = b.f1End && b.f1Start ? daysBetween(b.f1Start, b.f1End) : null;
+    const overall = b.f1Ratings ? b.f1Ratings.baseQuality : (b.ratings ? b.ratings.overall : 0);
+    entries.push({
+      type: 'f1', sortDate: endDate, id: b.id,
+      title: (b.vesselName || 'Batch') + ' \u00B7 ' + teaLabel(b.teaType),
+      sub: formatDateShort(b.f1Start) + ' \u00B7 ' + (f1Days || '?') + ' days F1',
+      teaType: b.teaType, overall: overall
+    });
+  });
+  completedF2.forEach(f2b => {
+    const info = f2b.parentBatchInfo || {};
+    const f2Days = f2b.f2Start && f2b.f2End ? daysBetween(f2b.f2Start, f2b.f2End) : null;
+    const overall = (f2b.ratings && f2b.ratings.overall) ? f2b.ratings.overall : 0;
+    entries.push({
+      type: 'f2', sortDate: f2b.f2End || f2b.f2Start, id: f2b.id,
+      title: f2b.flavoring || 'Unflavored',
+      sub: 'from ' + (info.vesselName || '?') + ', ' + teaLabel(info.teaType) + ' \u00B7 ' + (f2Days || '?') + ' days F2',
+      teaType: info.teaType || 'black', overall: overall
+    });
+  });
 
-    return '<div class="entry-card" onclick="openBatchDetail(\'' + batch.id + '\')">' +
-      '<div class="entry-icon ' + iconClass + '">' + teaEmoji(batch.teaType) + '</div>' +
+  entries.sort((a, b) => (b.sortDate || '').localeCompare(a.sortDate || ''));
+
+  container.innerHTML = entries.map(e => {
+    const iconClass = 'tea-' + (e.teaType || 'black');
+    const badge = e.type === 'f1'
+      ? '<span class="batch-type-badge f1-badge">F1</span>'
+      : '<span class="batch-type-badge f2-badge">F2</span>';
+    const clickHandler = e.type === 'f1'
+      ? 'openBatchDetail(\'' + e.id + '\')'
+      : 'openF2Detail(\'' + e.id + '\')';
+    const emoji = e.type === 'f2' ? '\uD83C\uDF76' : teaEmoji(e.teaType);
+
+    return '<div class="entry-card" onclick="' + clickHandler + '">' +
+      '<div class="entry-icon ' + iconClass + '">' + emoji + '</div>' +
       '<div class="entry-details">' +
-        '<div class="entry-title">' + (batch.vesselName || 'Batch') + ' &middot; ' + teaLabel(batch.teaType) + '</div>' +
-        '<div class="entry-sub">' + formatDateShort(batch.f1Start) + ' &middot; ' + totalDays + ' days' +
-          (batch.f2Flavoring ? ' &middot; ' + batch.f2Flavoring : '') + '</div>' +
+        '<div class="entry-title">' + badge + e.title + '</div>' +
+        '<div class="entry-sub">' + e.sub + '</div>' +
       '</div>' +
-      '<div class="entry-stars">' + starsHtml(overall) + '</div>' +
+      '<div class="entry-stars">' + starsHtml(e.overall) + '</div>' +
     '</div>';
   }).join('');
 }
@@ -2489,26 +2973,11 @@ function openBatchDetail(batchId) {
     html += '<div class="detail-row"><span class="dl">F1 End</span><span class="dv">' + formatDateFull(batch.f1End) + ' (' + daysBetween(batch.f1Start, batch.f1End) + ' days)</span></div>';
     if (batch.endPh) html += '<div class="detail-row"><span class="dl">F1 End pH</span><span class="dv">' + batch.endPh + '</span></div>';
   }
-  if (batch.f2Start) html += '<div class="detail-row"><span class="dl">F2 Start</span><span class="dv">' + formatDateFull(batch.f2Start) + '</span></div>';
-  if (batch.f2End) {
-    const f2Days = batch.f2Start ? daysBetween(batch.f2Start, batch.f2End) : '?';
-    html += '<div class="detail-row"><span class="dl">F2 End</span><span class="dv">' + formatDateFull(batch.f2End) + ' (' + f2Days + ' days)</span></div>';
-  }
-  if (batch.f1Start && (batch.f2End || batch.f1End)) {
-    const total = daysBetween(batch.f1Start, batch.f2End || batch.f1End);
-    html += '<div class="detail-row"><span class="dl">Total</span><span class="dv" style="color:var(--primary)">' + total + ' days</span></div>';
+  if (batch.f1Start && batch.f1End) {
+    const total = daysBetween(batch.f1Start, batch.f1End);
+    html += '<div class="detail-row"><span class="dl">F1 Duration</span><span class="dv" style="color:var(--primary)">' + total + ' days</span></div>';
   }
   html += '</div>';
-
-  // F2 Details
-  if (batch.f2Flavoring || batch.f2Sugar || batch.f2BottleHeadspace) {
-    html += '<div class="detail-section"><h3>F2 Details</h3>';
-    if (batch.f2Flavoring) html += '<div class="detail-row"><span class="dl">Flavoring</span><span class="dv">' + batch.f2Flavoring + '</span></div>';
-    if (batch.f2Sugar) html += '<div class="detail-row"><span class="dl">Added Sugar</span><span class="dv">' + batch.f2Sugar + 'g</span></div>';
-    if (batch.f2BottleHeadspace) html += '<div class="detail-row"><span class="dl">Headspace</span><span class="dv">' + batch.f2BottleHeadspace + '</span></div>';
-    if (batch.f2Notes) html += '<div class="detail-row"><span class="dl">Notes</span><span class="dv">' + batch.f2Notes + '</span></div>';
-    html += '</div>';
-  }
 
   // Checks
   if (batch.checks && batch.checks.length > 0) {
@@ -2535,22 +3004,47 @@ function openBatchDetail(batchId) {
     html += '</div>';
   }
 
-  // Ratings
-  if (batch.ratings) {
+  // F1 Ratings
+  if (batch.f1Ratings) {
+    html += '<div class="detail-section"><h3>F1 Ratings</h3>';
+    html += '<div class="detail-row"><span class="dl">Base Quality</span><span class="detail-stars">' + starsHtml(batch.f1Ratings.baseQuality) + '</span></div>';
+    html += '<div class="detail-row"><span class="dl">Balance</span><span class="detail-stars">' + starsHtml(batch.f1Ratings.balance) + '</span></div>';
+    html += '<div class="detail-row"><span class="dl">SCOBY Assessment</span><span class="detail-stars">' + starsHtml(batch.f1Ratings.scobyAssessment) + '</span></div>';
+    html += '</div>';
+  }
+  // Legacy ratings fallback (old data)
+  if (!batch.f1Ratings && batch.ratings) {
     html += '<div class="detail-section"><h3>Ratings</h3>';
-    html += '<div class="detail-row"><span class="dl">Carbonation</span><span class="detail-stars">' + starsHtml(batch.ratings.carbonation) + '</span></div>';
-    html += '<div class="detail-row"><span class="dl">Sweetness</span><span class="detail-stars">' + starsHtml(batch.ratings.sweetness) + '</span></div>';
-    html += '<div class="detail-row"><span class="dl">Tartness</span><span class="detail-stars">' + starsHtml(batch.ratings.tartness) + '</span></div>';
-    html += '<div class="detail-row"><span class="dl">Overall</span><span class="detail-stars">' + starsHtml(batch.ratings.overall) + '</span></div>';
+    if (batch.ratings.carbonation) html += '<div class="detail-row"><span class="dl">Carbonation</span><span class="detail-stars">' + starsHtml(batch.ratings.carbonation) + '</span></div>';
+    if (batch.ratings.sweetness) html += '<div class="detail-row"><span class="dl">Sweetness</span><span class="detail-stars">' + starsHtml(batch.ratings.sweetness) + '</span></div>';
+    if (batch.ratings.tartness) html += '<div class="detail-row"><span class="dl">Tartness</span><span class="detail-stars">' + starsHtml(batch.ratings.tartness) + '</span></div>';
+    if (batch.ratings.overall) html += '<div class="detail-row"><span class="dl">Overall</span><span class="detail-stars">' + starsHtml(batch.ratings.overall) + '</span></div>';
     html += '</div>';
   }
 
   // Notes
-  if (batch.flavorNotes || batch.nextTimeNotes || batch.notes) {
+  if (batch.notes) {
     html += '<div class="detail-section"><h3>Notes</h3>';
-    if (batch.flavorNotes) html += '<div style="font-size:14px;margin-bottom:8px"><strong>Flavor:</strong> ' + batch.flavorNotes + '</div>';
-    if (batch.nextTimeNotes) html += '<div style="font-size:14px;margin-bottom:8px"><strong>Next time:</strong> ' + batch.nextTimeNotes + '</div>';
-    if (batch.notes) html += '<div style="font-size:14px"><strong>Brew notes:</strong> ' + batch.notes + '</div>';
+    html += '<div style="font-size:14px"><strong>Brew notes:</strong> ' + batch.notes + '</div>';
+    html += '</div>';
+  }
+
+  // Linked F2 Bottles
+  const linkedF2 = getF2BatchesForParent(batch.id);
+  if (linkedF2.length > 0) {
+    html += '<div class="detail-section"><h3>F2 Bottles (' + linkedF2.length + ')</h3>';
+    linkedF2.forEach(f2b => {
+      const f2Days = f2b.f2Start && f2b.f2End ? daysBetween(f2b.f2Start, f2b.f2End) : (f2b.f2Start ? daysSince(f2b.f2Start) + 'd active' : '?');
+      const statusLabel = f2b.status === 'completed' ? 'Completed' : 'Active';
+      const overall = (f2b.ratings && f2b.ratings.overall) ? starsHtml(f2b.ratings.overall) : '';
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeDetail();openF2Detail(\'' + f2b.id + '\')">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+      html += '<strong>' + (f2b.flavoring || 'Unflavored') + '</strong>';
+      html += '<span style="font-size:12px;color:var(--text-light)">' + statusLabel + ' \u00B7 ' + f2Days + '</span>';
+      html += '</div>';
+      if (overall) html += '<div class="detail-stars" style="margin-top:4px">' + overall + '</div>';
+      html += '</div>';
+    });
     html += '</div>';
   }
 
@@ -2571,6 +3065,101 @@ async function promptDeleteBatch(batchId) {
   const ok = await showConfirm('Delete this batch permanently?');
   if (ok) {
     deleteBatch(batchId);
+    closeDetail();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// F2 BOTTLE DETAIL
+// ═══════════════════════════════════════════════════════
+function openF2Detail(f2Id) {
+  const f2b = f2batchesCache.find(b => b.id === f2Id);
+  if (!f2b) return;
+
+  const card = document.getElementById('detailCard');
+  const info = f2b.parentBatchInfo || {};
+  let html = '';
+
+  // Header
+  html += '<div class="detail-section">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+  html += '<h2 style="font-size:18px">\uD83C\uDF76 ' + (f2b.flavoring || 'Unflavored') + '</h2>';
+  html += '<button class="modal-close" onclick="closeDetail()" style="font-size:24px">&times;</button>';
+  html += '</div>';
+  html += '<div style="margin-top:4px;font-size:14px;color:var(--text-light)"><span class="batch-type-badge f2-badge">F2</span> ' + (f2b.status === 'completed' ? 'Completed' : 'Active') + '</div>';
+  html += '</div>';
+
+  // Heritage (F1 origin)
+  html += '<div class="detail-section"><h3>F1 Origin</h3>';
+  html += '<div class="detail-row"><span class="dl">Vessel</span><span class="dv">' + (info.vesselName || '?') + '</span></div>';
+  html += '<div class="detail-row"><span class="dl">Tea</span><span class="dv">' + teaEmoji(info.teaType) + ' ' + teaLabel(info.teaType) + '</span></div>';
+  if (info.f1Start) html += '<div class="detail-row"><span class="dl">F1 Started</span><span class="dv">' + formatDateFull(info.f1Start) + '</span></div>';
+  if (info.f1End) html += '<div class="detail-row"><span class="dl">F1 Ended</span><span class="dv">' + formatDateFull(info.f1End) + '</span></div>';
+  if (info.endPh) html += '<div class="detail-row"><span class="dl">End pH</span><span class="dv">' + info.endPh + '</span></div>';
+  // Link to parent batch
+  if (f2b.parentBatchId) {
+    const parentExists = batchesCache.find(b => b.id === f2b.parentBatchId);
+    if (parentExists) {
+      html += '<div style="margin-top:6px"><a href="javascript:void(0)" onclick="closeDetail();openBatchDetail(\'' + f2b.parentBatchId + '\')" style="color:var(--primary);font-size:13px;text-decoration:underline">View F1 Batch Details \u2192</a></div>';
+    }
+  }
+  html += '</div>';
+
+  // Bottle Details
+  html += '<div class="detail-section"><h3>Bottle Details</h3>';
+  if (f2b.f2Start) html += '<div class="detail-row"><span class="dl">F2 Start</span><span class="dv">' + formatDateFull(f2b.f2Start) + '</span></div>';
+  if (f2b.f2End) {
+    html += '<div class="detail-row"><span class="dl">F2 End</span><span class="dv">' + formatDateFull(f2b.f2End) + '</span></div>';
+    html += '<div class="detail-row"><span class="dl">F2 Duration</span><span class="dv" style="color:var(--primary)">' + daysBetween(f2b.f2Start, f2b.f2End) + ' days</span></div>';
+  } else if (f2b.f2Start) {
+    html += '<div class="detail-row"><span class="dl">F2 Day</span><span class="dv" style="color:var(--f2)">' + daysSince(f2b.f2Start) + ' days (active)</span></div>';
+  }
+  if (f2b.flavoring) html += '<div class="detail-row"><span class="dl">Flavoring</span><span class="dv">' + f2b.flavoring + '</span></div>';
+  if (f2b.volumeMl) html += '<div class="detail-row"><span class="dl">Volume</span><span class="dv">' + f2b.volumeMl + ' ml</span></div>';
+  if (f2b.sugarG) html += '<div class="detail-row"><span class="dl">Added Sugar</span><span class="dv">' + f2b.sugarG + 'g</span></div>';
+  if (f2b.headspace) html += '<div class="detail-row"><span class="dl">Headspace</span><span class="dv">' + f2b.headspace.charAt(0).toUpperCase() + f2b.headspace.slice(1) + '</span></div>';
+  html += '</div>';
+
+  // F2 Ratings
+  if (f2b.ratings && (f2b.ratings.carbonation || f2b.ratings.flavorIntensity || f2b.ratings.sweetness || f2b.ratings.overall)) {
+    html += '<div class="detail-section"><h3>F2 Ratings</h3>';
+    if (f2b.ratings.carbonation) html += '<div class="detail-row"><span class="dl">Carbonation</span><span class="detail-stars">' + starsHtml(f2b.ratings.carbonation) + '</span></div>';
+    if (f2b.ratings.flavorIntensity) html += '<div class="detail-row"><span class="dl">Flavor Intensity</span><span class="detail-stars">' + starsHtml(f2b.ratings.flavorIntensity) + '</span></div>';
+    if (f2b.ratings.sweetness) html += '<div class="detail-row"><span class="dl">Sweetness</span><span class="detail-stars">' + starsHtml(f2b.ratings.sweetness) + '</span></div>';
+    if (f2b.ratings.overall) html += '<div class="detail-row"><span class="dl">Overall</span><span class="detail-stars">' + starsHtml(f2b.ratings.overall) + '</span></div>';
+    html += '</div>';
+  }
+
+  // Notes
+  if (f2b.flavorNotes || f2b.nextTimeNotes || f2b.notes) {
+    html += '<div class="detail-section"><h3>Notes</h3>';
+    if (f2b.flavorNotes) html += '<div style="font-size:14px;margin-bottom:6px"><strong>Flavor:</strong> ' + f2b.flavorNotes + '</div>';
+    if (f2b.nextTimeNotes) html += '<div style="font-size:14px;margin-bottom:6px"><strong>Next time:</strong> ' + f2b.nextTimeNotes + '</div>';
+    if (f2b.notes) html += '<div style="font-size:14px"><strong>Notes:</strong> ' + f2b.notes + '</div>';
+    html += '</div>';
+  }
+
+  // Actions for active F2
+  if (f2b.status === 'f2_active') {
+    html += '<div style="margin-top:12px;text-align:center;display:flex;gap:10px;justify-content:center">';
+    html += '<button class="vessel-action" style="flex:1;background:var(--ready);color:white" onclick="closeDetail();openCompleteF2Form(\'' + f2b.id + '\')">Complete</button>';
+    html += '<button class="vessel-action danger" style="flex:1" onclick="promptDeleteF2Batch(\'' + f2b.id + '\')">Delete</button>';
+    html += '</div>';
+  } else {
+    // Delete button for completed
+    html += '<div style="margin-top:12px;text-align:center">';
+    html += '<button class="vessel-action danger" style="width:auto;padding:10px 24px" onclick="promptDeleteF2Batch(\'' + f2b.id + '\')">Delete Bottle</button>';
+    html += '</div>';
+  }
+
+  card.innerHTML = html;
+  document.getElementById('detailOverlay').classList.add('active');
+}
+
+async function promptDeleteF2Batch(f2Id) {
+  const ok = await showConfirm('Delete this F2 bottle permanently?');
+  if (ok) {
+    deleteF2Batch(f2Id);
     closeDetail();
   }
 }
@@ -2752,54 +3341,128 @@ function renderSparkline(batch) {
 // ═══════════════════════════════════════════════════════
 function renderInsights() {
   const body = document.getElementById('insightsBody');
-  const completed = getCompletedBatches();
+  const completedF1 = getCompletedBatches();
+  const completedF2 = getCompletedF2Batches();
+  const allF2 = f2batchesCache;
 
-  if (completed.length < 1) {
+  if (completedF1.length < 1 && completedF2.length < 1) {
     body.innerHTML = '<div class="empty-state">Complete a few batches to see insights.</div>';
     return;
   }
 
   let html = '';
 
-  // Stats
-  const f1Durations = completed.filter(b => b.f1Start && b.f1End).map(b => daysBetween(b.f1Start, b.f1End));
+  // F1 Stats
+  const f1Durations = completedF1.filter(b => b.f1Start && b.f1End).map(b => daysBetween(b.f1Start, b.f1End));
   const avgF1 = f1Durations.length > 0 ? Math.round(f1Durations.reduce((a, b) => a + b, 0) / f1Durations.length) : 0;
 
-  const overallRatings = completed.filter(b => b.ratings && b.ratings.overall).map(b => b.ratings.overall);
-  const avgRating = overallRatings.length > 0 ? (overallRatings.reduce((a, b) => a + b, 0) / overallRatings.length).toFixed(1) : '-';
+  const f1Ratings = completedF1.filter(b => b.f1Ratings && b.f1Ratings.baseQuality).map(b => b.f1Ratings.baseQuality);
+  // Legacy fallback for old data
+  const legacyRatings = completedF1.filter(b => !b.f1Ratings && b.ratings && b.ratings.overall).map(b => b.ratings.overall);
+  const allF1Ratings = [...f1Ratings, ...legacyRatings];
+  const avgF1Rating = allF1Ratings.length > 0 ? (allF1Ratings.reduce((a, b) => a + b, 0) / allF1Ratings.length).toFixed(1) : '-';
 
-  const totalBatches = completed.length;
+  const totalF1 = completedF1.length;
+  const totalLiters = completedF1.reduce((sum, b) => sum + (b.totalLiters || 0), 0);
 
-  const totalLiters = completed.reduce((sum, b) => sum + (b.totalLiters || 0), 0);
-
+  html += '<div class="chart-section" style="padding-bottom:8px"><h3>F1 Overview</h3></div>';
   html += '<div class="stat-grid">';
-  html += '<div class="stat-card"><div class="stat-value">' + totalBatches + '</div><div class="stat-label">Batches</div></div>';
+  html += '<div class="stat-card"><div class="stat-value">' + totalF1 + '</div><div class="stat-label">F1 Batches</div></div>';
   html += '<div class="stat-card"><div class="stat-value">' + avgF1 + 'd</div><div class="stat-label">Avg F1 Time</div></div>';
-  html += '<div class="stat-card"><div class="stat-value">' + avgRating + '</div><div class="stat-label">Avg Rating</div></div>';
+  html += '<div class="stat-card"><div class="stat-value">' + avgF1Rating + '</div><div class="stat-label">Avg F1 Rating</div></div>';
   html += '<div class="stat-card"><div class="stat-value">' + totalLiters.toFixed(1) + 'L</div><div class="stat-label">Total Brewed</div></div>';
   html += '</div>';
 
-  // Tea type breakdown
+  // F2 Stats
+  if (allF2.length > 0) {
+    const f2Durations = completedF2.filter(b => b.f2Start && b.f2End).map(b => daysBetween(b.f2Start, b.f2End));
+    const avgF2 = f2Durations.length > 0 ? Math.round(f2Durations.reduce((a, b) => a + b, 0) / f2Durations.length) : '-';
+    const f2OvRatings = completedF2.filter(b => b.ratings && b.ratings.overall).map(b => b.ratings.overall);
+    const avgF2Rating = f2OvRatings.length > 0 ? (f2OvRatings.reduce((a, b) => a + b, 0) / f2OvRatings.length).toFixed(1) : '-';
+    const totalBottles = allF2.length;
+    const activeBottles = allF2.filter(b => b.status === 'f2_active').length;
+
+    html += '<div class="chart-section" style="padding-bottom:8px"><h3>F2 Overview</h3></div>';
+    html += '<div class="stat-grid">';
+    html += '<div class="stat-card"><div class="stat-value">' + totalBottles + '</div><div class="stat-label">Total Bottles</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + activeBottles + '</div><div class="stat-label">Active Now</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + avgF2 + (avgF2 !== '-' ? 'd' : '') + '</div><div class="stat-label">Avg F2 Time</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + avgF2Rating + '</div><div class="stat-label">Avg F2 Rating</div></div>';
+    html += '</div>';
+
+    // Best Flavors chart
+    const flavorCounts = {};
+    allF2.forEach(b => {
+      if (b.flavoring) {
+        const flav = b.flavoring.trim();
+        if (!flavorCounts[flav]) flavorCounts[flav] = { count: 0, totalRating: 0, ratedCount: 0 };
+        flavorCounts[flav].count++;
+        if (b.ratings && b.ratings.overall) {
+          flavorCounts[flav].totalRating += b.ratings.overall;
+          flavorCounts[flav].ratedCount++;
+        }
+      }
+    });
+    const flavorEntries = Object.entries(flavorCounts);
+    if (flavorEntries.length > 0) {
+      const maxFlavCount = Math.max(...flavorEntries.map(([, v]) => v.count));
+      html += '<div class="chart-section"><h3>Best Flavors</h3>';
+      flavorEntries.sort((a, b) => {
+        const aAvg = a[1].ratedCount > 0 ? a[1].totalRating / a[1].ratedCount : 0;
+        const bAvg = b[1].ratedCount > 0 ? b[1].totalRating / b[1].ratedCount : 0;
+        return bAvg - aAvg || b[1].count - a[1].count;
+      }).slice(0, 8).forEach(([flavor, data]) => {
+        const avg = data.ratedCount > 0 ? (data.totalRating / data.ratedCount).toFixed(1) : '-';
+        const pct = Math.round((data.count / maxFlavCount) * 100);
+        html += '<div class="bar-row"><span class="bar-label">' + flavor + '</span><div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:var(--f2)">' + data.count + 'x' + (avg !== '-' ? ' \u00B7 ' + avg + '\u2605' : '') + '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    // Top Rated F2 Bottles
+    const topF2 = completedF2.filter(b => b.ratings && b.ratings.overall).sort((a, b) => b.ratings.overall - a.ratings.overall).slice(0, 5);
+    if (topF2.length > 0) {
+      html += '<div class="chart-section"><h3>Top Rated Bottles</h3>';
+      topF2.forEach(b => {
+        const info = b.parentBatchInfo || {};
+        const f2Days = b.f2Start && b.f2End ? daysBetween(b.f2Start, b.f2End) + 'd' : '?';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openF2Detail(\'' + b.id + '\')">';
+        html += '<div><strong>\uD83C\uDF76 ' + (b.flavoring || 'Unflavored') + '</strong><br><span style="font-size:12px;color:var(--text-light)">' + (info.vesselName || '?') + ' \u00B7 ' + teaLabel(info.teaType) + ' \u00B7 ' + f2Days + ' F2</span></div>';
+        html += '<div class="detail-stars">' + starsHtml(b.ratings.overall) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  // Tea type breakdown (F1)
   const teaCounts = {};
-  completed.forEach(b => { const t = b.teaType || 'unknown'; teaCounts[t] = (teaCounts[t] || 0) + 1; });
-  const maxCount = Math.max(...Object.values(teaCounts));
+  completedF1.forEach(b => { const t = b.teaType || 'unknown'; teaCounts[t] = (teaCounts[t] || 0) + 1; });
+  if (Object.keys(teaCounts).length > 0) {
+    const maxCount = Math.max(...Object.values(teaCounts));
+    html += '<div class="chart-section"><h3>Tea Types</h3>';
+    Object.entries(teaCounts).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
+      const pct = Math.round((count / maxCount) * 100);
+      html += '<div class="bar-row"><span class="bar-label">' + teaLabel(type) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + pct + '%">' + count + '</div></div></div>';
+    });
+    html += '</div>';
+  }
 
-  html += '<div class="chart-section"><h3>Tea Types</h3>';
-  Object.entries(teaCounts).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
-    const pct = Math.round((count / maxCount) * 100);
-    html += '<div class="bar-row"><span class="bar-label">' + teaLabel(type) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + pct + '%">' + count + '</div></div></div>';
+  // Top Rated F1 Batches
+  const topF1 = completedF1.filter(b => (b.f1Ratings && b.f1Ratings.baseQuality) || (b.ratings && b.ratings.overall));
+  topF1.sort((a, b) => {
+    const aR = a.f1Ratings ? a.f1Ratings.baseQuality : (a.ratings ? a.ratings.overall : 0);
+    const bR = b.f1Ratings ? b.f1Ratings.baseQuality : (b.ratings ? b.ratings.overall : 0);
+    return bR - aR;
   });
-  html += '</div>';
-
-  // Best rated batches
-  const byRating = completed.filter(b => b.ratings && b.ratings.overall).sort((a, b) => b.ratings.overall - a.ratings.overall).slice(0, 5);
-  if (byRating.length > 0) {
-    html += '<div class="chart-section"><h3>Top Rated</h3>';
-    byRating.forEach(b => {
-      const totalDays = b.f2End && b.f1Start ? daysBetween(b.f1Start, b.f2End) : '?';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">';
-      html += '<div><strong>' + (b.vesselName || 'Batch') + '</strong> &middot; ' + teaLabel(b.teaType) + '<br><span style="font-size:12px;color:var(--text-light)">' + formatDateShort(b.f1Start) + ' &middot; ' + totalDays + ' days' + (b.f2Flavoring ? ' &middot; ' + b.f2Flavoring : '') + '</span></div>';
-      html += '<div class="detail-stars">' + starsHtml(b.ratings.overall) + '</div>';
+  if (topF1.length > 0) {
+    html += '<div class="chart-section"><h3>Top Rated F1 Batches</h3>';
+    topF1.slice(0, 5).forEach(b => {
+      const f1Days = b.f1Start && b.f1End ? daysBetween(b.f1Start, b.f1End) : '?';
+      const rating = b.f1Ratings ? b.f1Ratings.baseQuality : (b.ratings ? b.ratings.overall : 0);
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openBatchDetail(\'' + b.id + '\')">';
+      html += '<div><strong>' + (b.vesselName || 'Batch') + '</strong> \u00B7 ' + teaLabel(b.teaType) + '<br><span style="font-size:12px;color:var(--text-light)">' + formatDateShort(b.f1Start) + ' \u00B7 ' + f1Days + ' days F1</span></div>';
+      html += '<div class="detail-stars">' + starsHtml(rating) + '</div>';
       html += '</div>';
     });
     html += '</div>';
@@ -2807,7 +3470,7 @@ function renderInsights() {
 
   // Fermentation duration chart
   if (f1Durations.length > 1) {
-    const recent = completed.filter(b => b.f1Start && b.f1End).slice(0, 8).reverse();
+    const recent = completedF1.filter(b => b.f1Start && b.f1End).slice(0, 8).reverse();
     const maxDur = Math.max(...recent.map(b => daysBetween(b.f1Start, b.f1End)));
     html += '<div class="chart-section"><h3>F1 Duration (Recent)</h3>';
     recent.forEach(b => {
@@ -2900,6 +3563,7 @@ fetchWeather().then(() => {
   updateTempDisplay();
   syncFromCloud().then(() => {
     renderDashboard();
+    renderActiveBottles();
     checkAlerts();
   });
 });
