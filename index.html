@@ -1224,7 +1224,7 @@ body {
       <div class="recipe-card highlight">
         <div class="recipe-note">Your kombucha comes out strong &mdash; here are ways to dial it back:</div>
         <ul class="recipe-list">
-          <li><strong>Shorter F1:</strong> Pull 2-3 days earlier than usual. Check pH &mdash; aim for 3.2-3.5 instead of going below 3.0</li>
+          <li><strong>Shorter F1:</strong> Pull 2-3 days earlier than usual. Check pH &mdash; aim for 3.0-3.25 instead of going below 2.75</li>
           <li><strong>Less tea:</strong> Try reducing from 2 bags/L to 1.5 bags/L</li>
           <li><strong>More sugar:</strong> Try 70g/L instead of 50g. More residual sweetness balances tartness</li>
           <li><strong>More starter isn't always better:</strong> Over 15% starter makes it tart faster. Try 10% (100ml per liter)</li>
@@ -1308,9 +1308,10 @@ body {
         <div class="recipe-note">Track pH to know exactly when your kombucha is ready:</div>
         <div class="ph-scale">
           <div class="ph-row"><span class="ph-val" style="color:#c9534f">2.0-2.5</span><span class="ph-desc">Too acidic / vinegar. Use as cleaning agent or salad dressing!</span></div>
-          <div class="ph-row"><span class="ph-val" style="color:#e8a948">2.5-3.0</span><span class="ph-desc">Very tart. Strong kombucha. Good if you like it punchy.</span></div>
-          <div class="ph-row"><span class="ph-val" style="color:#6b9e5a">3.0-3.5</span><span class="ph-desc">Sweet spot for most people. Balanced sweet-tart.</span></div>
-          <div class="ph-row"><span class="ph-val" style="color:#6b9e5a">3.5-4.0</span><span class="ph-desc">Mildly tart, still sweet. Good for beginners or mixing.</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#e8a948">2.5-2.75</span><span class="ph-desc">Very tart / vinegar territory. Great if you love sour.</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#6b9e5a">2.75-3.25</span><span class="ph-desc">Your sweet spot. Tart and well-developed flavour.</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#6b9e5a">3.25-3.75</span><span class="ph-desc">Mildly tart. Balanced for most people.</span></div>
+          <div class="ph-row"><span class="ph-val" style="color:#b0aaa2">3.75-4.0</span><span class="ph-desc">Lightly fermented. Still sweet. Needs more time for you.</span></div>
           <div class="ph-row"><span class="ph-val" style="color:#b0aaa2">4.0-4.5</span><span class="ph-desc">Barely fermented sweet tea. Needs more time.</span></div>
           <div class="ph-row"><span class="ph-val" style="color:#b0aaa2">4.5+</span><span class="ph-desc">Starting pH. Not yet kombucha.</span></div>
         </div>
@@ -1444,7 +1445,7 @@ body {
     </div>
     <div class="form-group">
       <label>pH Reading</label>
-      <input type="number" id="checkPh" placeholder="e.g. 3.5" step="0.1" min="0" max="14">
+      <input type="number" id="checkPh" placeholder="e.g. 3.2" step="0.1" min="0" max="14">
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -1742,8 +1743,8 @@ function estimateWithPhTrend(batch) {
 
   if (slope >= 0) return null; // pH not dropping
 
-  // Target pH range: 3.0-3.5
-  const targetPh = 3.25;
+  // Target pH range: 2.75-3.25
+  const targetPh = 3.0;
   const estDay = (targetPh - intercept) / slope;
   if (estDay < 0 || estDay > 90) return null;
 
@@ -1772,7 +1773,7 @@ function sugarFactor(batch) {
 function calculateEstimatedReadyDate(batch) {
   // Fast path: if latest pH is already in sweet spot, it's ready now
   const latestPh = getLatestPh(batch);
-  if (latestPh !== null && latestPh <= 3.5) {
+  if (latestPh !== null && latestPh <= 3.25) {
     const today = new Date();
     today.setHours(0,0,0,0);
     return today;
@@ -1849,7 +1850,7 @@ function getEstimatedReadyRange(batch) {
 
   // Fast path: if latest pH is already in sweet spot, it's ready now
   const latestPh = getLatestPh(batch);
-  if (latestPh !== null && latestPh <= 3.5) {
+  if (latestPh !== null && latestPh <= 3.25) {
     return { earliest: today, latest: today, readyNow: true };
   }
 
@@ -2431,7 +2432,7 @@ function renderDashboard() {
         const range = getEstimatedReadyRange(activeBatch);
         const dLeft = daysUntil(estReady);
         const latestPh = getLatestPh(activeBatch);
-        const isReady = range.readyNow || (latestPh !== null && latestPh <= 3.5);
+        const isReady = range.readyNow || (latestPh !== null && latestPh <= 3.25);
         let progressPct = 0;
         const estTotalDays = Math.max(1, Math.floor((estReady - new Date(activeBatch.f1Start + 'T00:00:00')) / 86400000));
         progressPct = isReady ? 100 : Math.min(100, Math.round((days / estTotalDays) * 100));
@@ -2535,7 +2536,7 @@ function checkAlerts() {
     const vName = vessel ? vessel.name : 'Vessel';
 
     const latestPh = getLatestPh(batch);
-    if (latestPh !== null && latestPh <= 3.5) {
+    if (latestPh !== null && latestPh <= 3.25) {
       alerts.push({ type: 'ready', msg: vName + ' is ready to bottle! pH ' + latestPh + ' is in the target zone.', batchId: batch.id });
     } else {
       const estReady = calculateEstimatedReadyDate(batch);
@@ -3319,9 +3320,9 @@ function renderPhChart(batch, phChecks) {
   let svg = '<div class="ph-chart-container"><h4>pH' + (hasTemp ? ' & Temp' : '') + ' Over Time</h4>';
   svg += '<div class="ph-chart"><svg viewBox="0 0 ' + W + ' ' + H + '">';
 
-  // Sweet spot zone (3.0-3.5)
-  const zoneTop = Math.max(yph(3.5), padT);
-  const zoneBot = Math.min(yph(3.0), padT + cH);
+  // Sweet spot zone (2.75-3.25)
+  const zoneTop = Math.max(yph(3.25), padT);
+  const zoneBot = Math.min(yph(2.75), padT + cH);
   if (zoneBot > zoneTop) {
     svg += '<rect class="ph-chart-zone" x="' + padL + '" y="' + zoneTop + '" width="' + cW + '" height="' + (zoneBot - zoneTop) + '"/>';
     svg += '<text class="ph-chart-zone-label" x="' + (padL + 4) + '" y="' + (zoneTop + 10) + '">sweet spot</text>';
@@ -3401,7 +3402,7 @@ function renderSparkline(batch) {
   const cH = H - padT - padB;
 
   const phValues = dataPoints.map(d => d.ph);
-  const phMin = Math.min(...phValues, 3.0) - 0.3;
+  const phMin = Math.min(...phValues, 2.75) - 0.3;
   const phMax = Math.max(...phValues) + 0.3;
   const dayMax = Math.max(...dataPoints.map(d => d.day), 1);
 
@@ -3410,9 +3411,9 @@ function renderSparkline(batch) {
 
   let svg = '<div class="sparkline-container"><svg viewBox="0 0 ' + W + ' ' + H + '">';
 
-  // Sweet spot zone (3.0-3.5) with dashed borders
-  const zoneTop = Math.max(yph(3.5), padT);
-  const zoneBot = Math.min(yph(3.0), padT + cH);
+  // Sweet spot zone (2.75-3.25) with dashed borders
+  const zoneTop = Math.max(yph(3.25), padT);
+  const zoneBot = Math.min(yph(2.75), padT + cH);
   if (zoneBot > zoneTop) {
     svg += '<rect class="sparkline-zone" x="' + padL + '" y="' + zoneTop + '" width="' + cW + '" height="' + (zoneBot - zoneTop) + '"/>';
     svg += '<line x1="' + padL + '" y1="' + zoneTop + '" x2="' + (padL + cW) + '" y2="' + zoneTop + '" stroke="#6b9e5a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.4"/>';
@@ -3431,7 +3432,7 @@ function renderSparkline(batch) {
 
   // Last dot + current pH label
   const last = dataPoints[dataPoints.length - 1];
-  const inZone = last.ph <= 3.5 && last.ph >= 3.0;
+  const inZone = last.ph <= 3.25 && last.ph >= 2.75;
   const dotColor = inZone ? 'var(--ready)' : 'var(--primary)';
   svg += '<circle cx="' + xd(last.day).toFixed(1) + '" cy="' + yph(last.ph).toFixed(1) + '" r="2.5" fill="' + dotColor + '"/>';
   svg += '<text style="font-size:9px;font-weight:700;fill:' + dotColor + '" x="' + (xd(last.day) + 4).toFixed(1) + '" y="' + (yph(last.ph) + 3).toFixed(1) + '">' + last.ph + '</text>';
@@ -3481,7 +3482,7 @@ function renderPhChartLarge(batch, phChecks) {
 
   // pH range — ensure sweet spot is always visible
   const phValues = dataPoints.map(d => d.ph);
-  const phMin = Math.min(Math.floor(Math.min(...phValues, 3.0) * 2) / 2 - 0.5, 2.5);
+  const phMin = Math.min(Math.floor(Math.min(...phValues, 2.75) * 2) / 2 - 0.5, 2.25);
   const phMax = Math.ceil(Math.max(...phValues) * 2) / 2 + 0.5;
   const allDays = [...dataPoints.map(d => d.day), ...tempPoints.map(d => d.day)];
   const dayMax = Math.max(...allDays, 1);
@@ -3501,14 +3502,14 @@ function renderPhChartLarge(batch, phChecks) {
   let svg = '<div class="ph-chart-container"><h4>pH' + (hasTemp ? ' & Temperature' : '') + ' Over Time</h4>';
   svg += '<div class="ph-chart"><svg viewBox="0 0 ' + W + ' ' + H + '">';
 
-  // Sweet spot zone (3.0-3.5) — prominent
-  const zoneTop = Math.max(yph(3.5), padT);
-  const zoneBot = Math.min(yph(3.0), padT + cH);
+  // Sweet spot zone (2.75-3.25) — prominent
+  const zoneTop = Math.max(yph(3.25), padT);
+  const zoneBot = Math.min(yph(2.75), padT + cH);
   if (zoneBot > zoneTop) {
     svg += '<rect class="ph-chart-zone" x="' + padL + '" y="' + zoneTop + '" width="' + cW + '" height="' + (zoneBot - zoneTop) + '" style="opacity:0.15"/>';
     svg += '<line x1="' + padL + '" y1="' + zoneTop + '" x2="' + (padL + cW) + '" y2="' + zoneTop + '" stroke="#6b9e5a" stroke-width="0.8" stroke-dasharray="4,3"/>';
     svg += '<line x1="' + padL + '" y1="' + zoneBot + '" x2="' + (padL + cW) + '" y2="' + zoneBot + '" stroke="#6b9e5a" stroke-width="0.8" stroke-dasharray="4,3"/>';
-    svg += '<text style="font-size:9px;fill:#6b9e5a;font-weight:600" x="' + (padL + 4) + '" y="' + (zoneTop + 11) + '">Target Zone (3.0\u20133.5)</text>';
+    svg += '<text style="font-size:9px;fill:#6b9e5a;font-weight:600" x="' + (padL + 4) + '" y="' + (zoneTop + 11) + '">Target Zone (2.75\u20133.25)</text>';
   }
 
   // Grid lines and pH labels (left axis)
@@ -3555,7 +3556,7 @@ function renderPhChartLarge(batch, phChecks) {
 
   // pH dots with labels
   dataPoints.forEach(d => {
-    const inZone = d.ph <= 3.5 && d.ph >= 3.0;
+    const inZone = d.ph <= 3.25 && d.ph >= 2.75;
     svg += '<circle cx="' + xd(d.day).toFixed(1) + '" cy="' + yph(d.ph).toFixed(1) + '" r="4" fill="' + (inZone ? 'var(--ready)' : 'var(--primary)') + '"/>';
     svg += '<text style="font-size:10px;fill:var(--text);font-weight:700" x="' + xd(d.day).toFixed(1) + '" y="' + (yph(d.ph) - 8).toFixed(1) + '" text-anchor="middle">' + d.ph + '</text>';
   });
@@ -3581,7 +3582,7 @@ function openVesselFermentationView(batchId) {
   const latestPh = getLatestPh(batch);
   const range = getEstimatedReadyRange(batch);
   const confidence = getEstimationConfidence(batch);
-  const isReady = range.readyNow || (latestPh !== null && latestPh <= 3.5);
+  const isReady = range.readyNow || (latestPh !== null && latestPh <= 3.25);
 
   let html = '';
 
@@ -3597,8 +3598,8 @@ function openVesselFermentationView(batchId) {
   // Current Status Summary
   html += '<div class="detail-section"><h3>Current Status</h3>';
   if (latestPh !== null) {
-    const phClass = latestPh <= 3.5 ? 'in-zone' : latestPh <= 4.0 ? 'close' : 'fermenting';
-    const phLabel = latestPh <= 3.0 ? 'In sweet spot' : latestPh <= 3.5 ? 'In target zone' : latestPh <= 4.0 ? 'Getting close' : 'Still fermenting';
+    const phClass = latestPh <= 3.25 ? 'in-zone' : latestPh <= 4.0 ? 'close' : 'fermenting';
+    const phLabel = latestPh <= 2.75 ? 'In sweet spot' : latestPh <= 3.25 ? 'In target zone' : latestPh <= 4.0 ? 'Getting close' : 'Still fermenting';
     html += '<div style="text-align:center;margin:8px 0">';
     html += '<span class="ph-current-badge ' + phClass + '">' + latestPh + ' pH</span>';
     html += '<div style="font-size:12px;color:var(--text-light);margin-top:4px">' + phLabel + '</div>';
@@ -3655,7 +3656,7 @@ function openVesselFermentationView(batchId) {
     html += '<th>Date</th><th>Day</th><th>pH</th><th>Brew \u00B0C</th><th>Amb \u00B0C</th><th>Notes</th>';
     html += '</tr></thead><tbody>';
     allChecks.forEach(c => {
-      const phClass = c.ph ? (c.ph <= 3.5 ? 'td-ph in-zone' : 'td-ph') : '';
+      const phClass = c.ph ? (c.ph <= 3.25 ? 'td-ph in-zone' : 'td-ph') : '';
       html += '<tr>';
       html += '<td>' + formatDateShort(c.date) + '</td>';
       html += '<td>' + c.day + '</td>';
