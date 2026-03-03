@@ -115,6 +115,7 @@ body {
 }
 .alert-banner.alert-yellow { background: var(--alert-yellow-bg); color: var(--alert-yellow-text); border-bottom-color: #ffeeba; }
 .alert-banner.alert-red { background: var(--alert-red-bg); color: var(--alert-red-text); border-bottom-color: #f5c6cb; }
+.alert-banner.alert-green { background: #d4edda; color: #155724; border-bottom-color: #c3e6cb; }
 
 /* Tab views */
 .tab-content { display: none; }
@@ -163,6 +164,7 @@ body {
 .status-badge.f1 { background: var(--f1); }
 .status-badge.f2 { background: var(--f2); color: var(--text); }
 .status-badge.completed { background: var(--ready); }
+.status-badge.ready { background: var(--ready); }
 .status-badge.check-soon { background: var(--alert-yellow-text); }
 .status-badge.overdue { background: var(--danger); }
 
@@ -191,6 +193,7 @@ body {
 }
 .progress-bar.check-soon { background: var(--alert-yellow-text); }
 .progress-bar.overdue { background: var(--danger); animation: pulse 1s infinite; }
+.progress-bar.ready { background: var(--ready); }
 .progress-bar.f2 { background: var(--f2); }
 
 .vessel-actions {
@@ -921,11 +924,11 @@ body {
 /* Sparkline */
 .sparkline-container {
   margin: 4px 0 2px;
-  height: 28px;
+  height: 44px;
 }
 .sparkline-container svg {
   width: 100%;
-  height: 28px;
+  height: 44px;
   overflow: visible;
 }
 .sparkline-line {
@@ -940,7 +943,7 @@ body {
 }
 .sparkline-zone {
   fill: #6b9e5a;
-  opacity: 0.08;
+  opacity: 0.15;
 }
 
 /* Temp chart line (dual axis) */
@@ -955,6 +958,46 @@ body {
 .temp-chart-dot {
   fill: #e8a948;
 }
+
+/* Fermentation detail popup */
+.ferm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+.ferm-table th {
+  background: var(--bg);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
+  font-weight: 700;
+  padding: 6px 6px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+.ferm-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.ferm-table tr:last-child td { border-bottom: none; }
+.ferm-table .td-ph { font-weight: 700; color: var(--primary); }
+.ferm-table .td-ph.in-zone { color: var(--ready); }
+.ferm-table .td-taste { font-size: 11px; color: var(--text-light); max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-current-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
+.ph-current-badge.in-zone { background: rgba(107,158,90,0.15); color: var(--ready); }
+.ph-current-badge.close { background: rgba(232,201,74,0.15); color: #b8960a; }
+.ph-current-badge.fermenting { background: rgba(196,135,58,0.15); color: var(--primary); }
 
 /* Vessel capacity display */
 .vessel-capacity {
@@ -1631,6 +1674,13 @@ function updateTempDisplay() {
 // ═══════════════════════════════════════════════════════
 // FERMENTATION ESTIMATION (3-level model)
 // ═══════════════════════════════════════════════════════
+function getLatestPh(batch) {
+  const checks = (batch.checks || []).filter(c => c.ph);
+  if (checks.length > 0) return checks[checks.length - 1].ph;
+  if (batch.startPh) return batch.startPh;
+  return null;
+}
+
 function estimateFermentationDays(avgTempC) {
   if (avgTempC >= 30) return { minDays: 5, maxDays: 7 };
   if (avgTempC >= 26) return { minDays: 7, maxDays: 14 };
@@ -1720,6 +1770,14 @@ function sugarFactor(batch) {
 }
 
 function calculateEstimatedReadyDate(batch) {
+  // Fast path: if latest pH is already in sweet spot, it's ready now
+  const latestPh = getLatestPh(batch);
+  if (latestPh !== null && latestPh <= 3.5) {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    return today;
+  }
+
   // Level 2: Try pH-based estimate first (most accurate)
   const phEstimate = estimateWithPhTrend(batch);
   if (phEstimate) return phEstimate;
@@ -1788,6 +1846,26 @@ function getEstimatedReadyRange(batch) {
   const today = new Date();
   today.setHours(0,0,0,0);
   const daysSinceStart = Math.max(0, Math.floor((today - startDate) / 86400000));
+
+  // Fast path: if latest pH is already in sweet spot, it's ready now
+  const latestPh = getLatestPh(batch);
+  if (latestPh !== null && latestPh <= 3.5) {
+    return { earliest: today, latest: today, readyNow: true };
+  }
+
+  // Try pH trend estimate — if available, anchor range to it (±2 days)
+  const phEstimate = estimateWithPhTrend(batch);
+  if (phEstimate) {
+    const early = new Date(phEstimate);
+    early.setDate(early.getDate() - 2);
+    const late = new Date(phEstimate);
+    late.setDate(late.getDate() + 2);
+    // Don't show dates before today as "earliest"
+    if (early < today) early.setTime(today.getTime());
+    return { earliest: early, latest: late };
+  }
+
+  // Fallback: temperature-based simulation
   const sFactor = scobyFactor(batch);
   const suFactor = sugarFactor(batch);
 
@@ -2352,12 +2430,15 @@ function renderDashboard() {
         const estReady = calculateEstimatedReadyDate(activeBatch);
         const range = getEstimatedReadyRange(activeBatch);
         const dLeft = daysUntil(estReady);
+        const latestPh = getLatestPh(activeBatch);
+        const isReady = range.readyNow || (latestPh !== null && latestPh <= 3.5);
         let progressPct = 0;
         const estTotalDays = Math.max(1, Math.floor((estReady - new Date(activeBatch.f1Start + 'T00:00:00')) / 86400000));
-        progressPct = Math.min(100, Math.round((days / estTotalDays) * 100));
+        progressPct = isReady ? 100 : Math.min(100, Math.round((days / estTotalDays) * 100));
 
         let barClass = '';
-        if (dLeft < 0) { statusClass = 'overdue'; barClass = ' overdue'; statusBadge = '<span class="status-badge overdue">Overdue</span>'; }
+        if (isReady) { statusClass = 'ready'; barClass = ' ready'; statusBadge = '<span class="status-badge ready">Ready</span>'; }
+        else if (dLeft < 0) { statusClass = 'overdue'; barClass = ' overdue'; statusBadge = '<span class="status-badge overdue">Overdue</span>'; }
         else if (dLeft <= 2) { statusClass = 'check-soon'; barClass = ' check-soon'; statusBadge = '<span class="status-badge check-soon">Check Soon</span>'; }
         else { statusClass = 'f1-active'; statusBadge = '<span class="status-badge f1">F1 Active</span>'; }
 
@@ -2366,17 +2447,21 @@ function renderDashboard() {
         const confPill = '<span class="confidence-pill ' + confidence.level + '">' + confidence.label + '</span>';
         const sparkline = renderSparkline(activeBatch);
 
-        cardContent = '<div class="vessel-info">' +
+        const estReadyDisplay = isReady
+          ? '<span class="dv" style="color:var(--ready);font-weight:700">Ready now \u2714</span>'
+          : '<span class="dv">' + formatDateShort(dateStrFromDate(range.earliest)) + ' - ' + formatDateShort(dateStrFromDate(range.latest)) + '</span>';
+
+        cardContent = '<div class="vessel-info" onclick="openVesselFermentationView(\'' + activeBatch.id + '\')" style="cursor:pointer">' +
           '<div class="info-row"><span class="dl">' + teaEmoji(activeBatch.teaType) + ' ' + teaLabel(activeBatch.teaType) + ' tea</span><span class="info-label">Day ' + days + '</span></div>' +
           '<div class="info-row"><span class="dl">Brewed ' + formatDateShort(activeBatch.f1Start) + '</span><span class="dv">Vol: ' + (activeBatch.totalLiters || '?') + 'L</span></div>' +
           (lastCheck ? '<div class="info-row"><span class="dl">Last pH: ' + (lastCheck.ph || '?') + '</span><span class="dl">' + formatDateShort(lastCheck.date) + '</span></div>' : '') +
-          '<div class="info-row"><span class="dl">Est. ready' + confPill + '</span><span class="dv">' + formatDateShort(dateStrFromDate(range.earliest)) + ' - ' + formatDateShort(dateStrFromDate(range.latest)) + '</span></div>' +
+          '<div class="info-row"><span class="dl">Est. ready' + confPill + '</span>' + estReadyDisplay + '</div>' +
           '</div>' +
           sparkline +
           '<div class="progress-bar-container"><div class="progress-bar' + barClass + '" style="width:' + progressPct + '%"></div></div>';
 
-        actions = '<button class="vessel-action" onclick="openCheckForm(\'' + activeBatch.id + '\')">Check</button>' +
-          '<button class="vessel-action primary" onclick="openBottleForm(\'' + activeBatch.id + '\')">Bottle</button>';
+        actions = '<button class="vessel-action" onclick="event.stopPropagation();openCheckForm(\'' + activeBatch.id + '\')">Check</button>' +
+          '<button class="vessel-action primary" onclick="event.stopPropagation();openBottleForm(\'' + activeBatch.id + '\')">Bottle</button>';
 
       }
     } else {
@@ -2449,12 +2534,17 @@ function checkAlerts() {
     const vessel = vesselsCache.find(v => v._fbKey === batch.vesselId);
     const vName = vessel ? vessel.name : 'Vessel';
 
-    const estReady = calculateEstimatedReadyDate(batch);
-    const dl = daysUntil(estReady);
-    if (dl < 0) {
-      alerts.push({ type: 'overdue', msg: vName + ' F1 may be overdue by ' + Math.abs(dl) + ' day' + (Math.abs(dl) !== 1 ? 's' : '') + '!', batchId: batch.id });
-    } else if (dl <= 2) {
-      alerts.push({ type: 'check-soon', msg: vName + ' F1 approaching ready (' + dl + ' day' + (dl !== 1 ? 's' : '') + ')', batchId: batch.id });
+    const latestPh = getLatestPh(batch);
+    if (latestPh !== null && latestPh <= 3.5) {
+      alerts.push({ type: 'ready', msg: vName + ' is ready to bottle! pH ' + latestPh + ' is in the target zone.', batchId: batch.id });
+    } else {
+      const estReady = calculateEstimatedReadyDate(batch);
+      const dl = daysUntil(estReady);
+      if (dl < 0) {
+        alerts.push({ type: 'overdue', msg: vName + ' F1 may be overdue by ' + Math.abs(dl) + ' day' + (Math.abs(dl) !== 1 ? 's' : '') + '!', batchId: batch.id });
+      } else if (dl <= 2) {
+        alerts.push({ type: 'check-soon', msg: vName + ' F1 approaching ready (' + dl + ' day' + (dl !== 1 ? 's' : '') + ')', batchId: batch.id });
+      }
     }
   });
 
@@ -2474,12 +2564,15 @@ function checkAlerts() {
   const container = document.getElementById('alertBanner');
   if (alerts.length === 0) { container.innerHTML = ''; return; }
   container.innerHTML = alerts.map(a => {
-    const cls = a.type === 'overdue' ? 'alert-banner alert-red' : 'alert-banner alert-yellow';
-    const icon = a.type === 'overdue' ? '\u26A0\uFE0F' : '\uD83D\uDD0D';
+    let cls, icon;
+    if (a.type === 'ready') { cls = 'alert-banner alert-green'; icon = '\u2705'; }
+    else if (a.type === 'overdue') { cls = 'alert-banner alert-red'; icon = '\u26A0\uFE0F'; }
+    else { cls = 'alert-banner alert-yellow'; icon = '\uD83D\uDD0D'; }
     if (a.f2Id) {
       return '<div class="' + cls + '" onclick="scrollToActiveBottles()">' + icon + ' ' + a.msg + '</div>';
     }
-    return '<div class="' + cls + '" onclick="openCheckForm(\'' + a.batchId + '\')">' + icon + ' ' + a.msg + '</div>';
+    const clickAction = a.type === 'ready' ? 'openBottleForm(\'' + a.batchId + '\')' : 'openCheckForm(\'' + a.batchId + '\')';
+    return '<div class="' + cls + '" onclick="' + clickAction + '">' + icon + ' ' + a.msg + '</div>';
   }).join('');
 }
 
@@ -3302,13 +3395,13 @@ function renderSparkline(batch) {
   });
   if (dataPoints.length < 2) return '';
 
-  const W = 120, H = 28;
-  const padL = 2, padR = 2, padT = 3, padB = 3;
+  const W = 160, H = 44;
+  const padL = 24, padR = 32, padT = 4, padB = 4;
   const cW = W - padL - padR;
   const cH = H - padT - padB;
 
   const phValues = dataPoints.map(d => d.ph);
-  const phMin = Math.min(...phValues) - 0.3;
+  const phMin = Math.min(...phValues, 3.0) - 0.3;
   const phMax = Math.max(...phValues) + 0.3;
   const dayMax = Math.max(...dataPoints.map(d => d.day), 1);
 
@@ -3317,23 +3410,280 @@ function renderSparkline(batch) {
 
   let svg = '<div class="sparkline-container"><svg viewBox="0 0 ' + W + ' ' + H + '">';
 
-  // Sweet spot zone
+  // Sweet spot zone (3.0-3.5) with dashed borders
   const zoneTop = Math.max(yph(3.5), padT);
   const zoneBot = Math.min(yph(3.0), padT + cH);
   if (zoneBot > zoneTop) {
     svg += '<rect class="sparkline-zone" x="' + padL + '" y="' + zoneTop + '" width="' + cW + '" height="' + (zoneBot - zoneTop) + '"/>';
+    svg += '<line x1="' + padL + '" y1="' + zoneTop + '" x2="' + (padL + cW) + '" y2="' + zoneTop + '" stroke="#6b9e5a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.4"/>';
+    svg += '<line x1="' + padL + '" y1="' + zoneBot + '" x2="' + (padL + cW) + '" y2="' + zoneBot + '" stroke="#6b9e5a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.4"/>';
   }
+
+  // Axis labels (min and max pH on left)
+  const topPh = Math.ceil(phMax * 2) / 2;
+  const botPh = Math.floor(phMin * 2) / 2;
+  svg += '<text style="font-size:8px;fill:var(--text-light)" x="' + (padL - 3) + '" y="' + (padT + 6) + '" text-anchor="end">' + topPh.toFixed(1) + '</text>';
+  svg += '<text style="font-size:8px;fill:var(--text-light)" x="' + (padL - 3) + '" y="' + (padT + cH) + '" text-anchor="end">' + botPh.toFixed(1) + '</text>';
 
   // Line
   const pathParts = dataPoints.map((d, i) => (i === 0 ? 'M' : 'L') + xd(d.day).toFixed(1) + ',' + yph(d.ph).toFixed(1));
   svg += '<path class="sparkline-line" d="' + pathParts.join(' ') + '"/>';
 
-  // Last dot
+  // Last dot + current pH label
   const last = dataPoints[dataPoints.length - 1];
-  svg += '<circle class="sparkline-dot" cx="' + xd(last.day).toFixed(1) + '" cy="' + yph(last.ph).toFixed(1) + '" r="2"/>';
+  const inZone = last.ph <= 3.5 && last.ph >= 3.0;
+  const dotColor = inZone ? 'var(--ready)' : 'var(--primary)';
+  svg += '<circle cx="' + xd(last.day).toFixed(1) + '" cy="' + yph(last.ph).toFixed(1) + '" r="2.5" fill="' + dotColor + '"/>';
+  svg += '<text style="font-size:9px;font-weight:700;fill:' + dotColor + '" x="' + (xd(last.day) + 4).toFixed(1) + '" y="' + (yph(last.ph) + 3).toFixed(1) + '">' + last.ph + '</text>';
 
   svg += '</svg></div>';
   return svg;
+}
+
+// ═══════════════════════════════════════════════════════
+// VESSEL FERMENTATION VIEW (click-through popup)
+// ═══════════════════════════════════════════════════════
+function renderPhChartLarge(batch, phChecks) {
+  const dataPoints = [];
+  if (batch.startPh) {
+    dataPoints.push({ date: batch.f1Start, ph: batch.startPh, day: 0, temp: batch.startBrewTemp || null });
+  }
+  phChecks.forEach(c => {
+    const day = daysBetween(batch.f1Start, c.date);
+    dataPoints.push({ date: c.date, ph: c.ph, day: day, temp: c.brewTemp || c.ambientTemp || c.temp || null });
+  });
+  if (batch.endPh && batch.f1End) {
+    const exists = dataPoints.find(d => d.date === batch.f1End);
+    if (!exists) {
+      dataPoints.push({ date: batch.f1End, ph: batch.endPh, day: daysBetween(batch.f1Start, batch.f1End), temp: null });
+    }
+  }
+
+  if (dataPoints.length < 1) return '<div style="color:var(--text-light);font-size:13px;padding:12px 0">No pH data yet. Add a check to see the chart.</div>';
+
+  // Collect temperature data
+  const tempPoints = [];
+  if (batch.startBrewTemp) tempPoints.push({ day: 0, temp: batch.startBrewTemp });
+  (batch.checks || []).forEach(c => {
+    const t = c.brewTemp || c.ambientTemp || c.temp;
+    if (t) {
+      const day = daysBetween(batch.f1Start, c.date);
+      tempPoints.push({ day: day, temp: t });
+    }
+  });
+  const hasTemp = tempPoints.length >= 1;
+
+  // Chart dimensions — larger than renderPhChart
+  const W = 340, H = hasTemp ? 180 : 150;
+  const padL = 34, padR = hasTemp ? 40 : 12, padT = 14, padB = 28;
+  const cW = W - padL - padR;
+  const cH = H - padT - padB;
+
+  // pH range — ensure sweet spot is always visible
+  const phValues = dataPoints.map(d => d.ph);
+  const phMin = Math.min(Math.floor(Math.min(...phValues, 3.0) * 2) / 2 - 0.5, 2.5);
+  const phMax = Math.ceil(Math.max(...phValues) * 2) / 2 + 0.5;
+  const allDays = [...dataPoints.map(d => d.day), ...tempPoints.map(d => d.day)];
+  const dayMax = Math.max(...allDays, 1);
+
+  // Temp range
+  let tempMin = 15, tempMax = 35;
+  if (hasTemp) {
+    const tv = tempPoints.map(d => d.temp);
+    tempMin = Math.floor(Math.min(...tv)) - 2;
+    tempMax = Math.ceil(Math.max(...tv)) + 2;
+  }
+
+  function xd(day) { return padL + (day / dayMax) * cW; }
+  function yph(ph) { return padT + ((phMax - ph) / (phMax - phMin)) * cH; }
+  function yt(temp) { return padT + ((tempMax - temp) / (tempMax - tempMin)) * cH; }
+
+  let svg = '<div class="ph-chart-container"><h4>pH' + (hasTemp ? ' & Temperature' : '') + ' Over Time</h4>';
+  svg += '<div class="ph-chart"><svg viewBox="0 0 ' + W + ' ' + H + '">';
+
+  // Sweet spot zone (3.0-3.5) — prominent
+  const zoneTop = Math.max(yph(3.5), padT);
+  const zoneBot = Math.min(yph(3.0), padT + cH);
+  if (zoneBot > zoneTop) {
+    svg += '<rect class="ph-chart-zone" x="' + padL + '" y="' + zoneTop + '" width="' + cW + '" height="' + (zoneBot - zoneTop) + '" style="opacity:0.15"/>';
+    svg += '<line x1="' + padL + '" y1="' + zoneTop + '" x2="' + (padL + cW) + '" y2="' + zoneTop + '" stroke="#6b9e5a" stroke-width="0.8" stroke-dasharray="4,3"/>';
+    svg += '<line x1="' + padL + '" y1="' + zoneBot + '" x2="' + (padL + cW) + '" y2="' + zoneBot + '" stroke="#6b9e5a" stroke-width="0.8" stroke-dasharray="4,3"/>';
+    svg += '<text style="font-size:9px;fill:#6b9e5a;font-weight:600" x="' + (padL + 4) + '" y="' + (zoneTop + 11) + '">Target Zone (3.0\u20133.5)</text>';
+  }
+
+  // Grid lines and pH labels (left axis)
+  for (let ph = Math.ceil(phMin * 2) / 2; ph <= phMax; ph += 0.5) {
+    const yy = yph(ph);
+    if (yy >= padT && yy <= padT + cH) {
+      svg += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (padL + cW) + '" y2="' + yy + '" stroke="#e5ddd3" stroke-width="0.5" stroke-dasharray="3,3"/>';
+      svg += '<text style="font-size:10px;fill:var(--text-light);font-weight:600" x="' + (padL - 4) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + ph.toFixed(1) + '</text>';
+    }
+  }
+
+  // Temp labels (right axis)
+  if (hasTemp) {
+    for (let t = Math.ceil(tempMin / 5) * 5; t <= tempMax; t += 5) {
+      const yy = yt(t);
+      svg += '<text style="font-size:10px;fill:#e8a948;font-weight:600" x="' + (padL + cW + 4) + '" y="' + (yy + 3.5) + '">' + t + '\u00B0</text>';
+    }
+  }
+
+  // Day labels
+  const dayStep = dayMax <= 10 ? 1 : dayMax <= 30 ? 5 : 7;
+  for (let d = 0; d <= dayMax; d += dayStep) {
+    const xx = xd(d);
+    svg += '<text style="font-size:9px;fill:var(--text-light)" x="' + xx + '" y="' + (H - 6) + '" text-anchor="middle">D' + d + '</text>';
+    svg += '<line x1="' + xx + '" y1="' + padT + '" x2="' + xx + '" y2="' + (padT + cH) + '" stroke="#e5ddd3" stroke-width="0.3" stroke-dasharray="2,4"/>';
+  }
+
+  // Temperature line (dashed, behind pH)
+  if (hasTemp && tempPoints.length > 1) {
+    const tPath = tempPoints.map((d, i) => (i === 0 ? 'M' : 'L') + xd(d.day).toFixed(1) + ',' + yt(d.temp).toFixed(1));
+    svg += '<path class="temp-chart-line" d="' + tPath.join(' ') + '"/>';
+  }
+  if (hasTemp) {
+    tempPoints.forEach(d => {
+      svg += '<circle class="temp-chart-dot" cx="' + xd(d.day).toFixed(1) + '" cy="' + yt(d.temp).toFixed(1) + '" r="3"/>';
+    });
+  }
+
+  // pH line
+  if (dataPoints.length > 1) {
+    const pathParts = dataPoints.map((d, i) => (i === 0 ? 'M' : 'L') + xd(d.day).toFixed(1) + ',' + yph(d.ph).toFixed(1));
+    svg += '<path class="ph-chart-line" d="' + pathParts.join(' ') + '"/>';
+  }
+
+  // pH dots with labels
+  dataPoints.forEach(d => {
+    const inZone = d.ph <= 3.5 && d.ph >= 3.0;
+    svg += '<circle cx="' + xd(d.day).toFixed(1) + '" cy="' + yph(d.ph).toFixed(1) + '" r="4" fill="' + (inZone ? 'var(--ready)' : 'var(--primary)') + '"/>';
+    svg += '<text style="font-size:10px;fill:var(--text);font-weight:700" x="' + xd(d.day).toFixed(1) + '" y="' + (yph(d.ph) - 8).toFixed(1) + '" text-anchor="middle">' + d.ph + '</text>';
+  });
+
+  // Legend
+  svg += '<line x1="' + padL + '" y1="' + (H - 18) + '" x2="' + (padL + 14) + '" y2="' + (H - 18) + '" stroke="var(--primary)" stroke-width="2.5"/>';
+  svg += '<text style="font-size:9px;fill:var(--text-light)" x="' + (padL + 17) + '" y="' + (H - 15) + '">pH</text>';
+  if (hasTemp) {
+    svg += '<line x1="' + (padL + 36) + '" y1="' + (H - 18) + '" x2="' + (padL + 50) + '" y2="' + (H - 18) + '" stroke="#e8a948" stroke-width="2" stroke-dasharray="3,2"/>';
+    svg += '<text style="font-size:9px;fill:var(--text-light)" x="' + (padL + 53) + '" y="' + (H - 15) + '">Temp</text>';
+  }
+
+  svg += '</svg></div></div>';
+  return svg;
+}
+
+function openVesselFermentationView(batchId) {
+  const batch = batchesCache.find(b => b.id === batchId);
+  if (!batch) return;
+
+  const card = document.getElementById('detailCard');
+  const days = daysSince(batch.f1Start);
+  const latestPh = getLatestPh(batch);
+  const range = getEstimatedReadyRange(batch);
+  const confidence = getEstimationConfidence(batch);
+  const isReady = range.readyNow || (latestPh !== null && latestPh <= 3.5);
+
+  let html = '';
+
+  // Header
+  html += '<div class="detail-section">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+  html += '<h2 style="font-size:18px">' + (batch.vesselName || 'Batch') + '</h2>';
+  html += '<button class="modal-close" onclick="closeDetail()" style="font-size:24px">&times;</button>';
+  html += '</div>';
+  html += '<div style="margin-top:4px;font-size:14px;color:var(--text-light)">' + teaEmoji(batch.teaType) + ' ' + teaLabel(batch.teaType) + ' tea \u00B7 Day ' + days + '</div>';
+  html += '</div>';
+
+  // Current Status Summary
+  html += '<div class="detail-section"><h3>Current Status</h3>';
+  if (latestPh !== null) {
+    const phClass = latestPh <= 3.5 ? 'in-zone' : latestPh <= 4.0 ? 'close' : 'fermenting';
+    const phLabel = latestPh <= 3.0 ? 'In sweet spot' : latestPh <= 3.5 ? 'In target zone' : latestPh <= 4.0 ? 'Getting close' : 'Still fermenting';
+    html += '<div style="text-align:center;margin:8px 0">';
+    html += '<span class="ph-current-badge ' + phClass + '">' + latestPh + ' pH</span>';
+    html += '<div style="font-size:12px;color:var(--text-light);margin-top:4px">' + phLabel + '</div>';
+    html += '</div>';
+  }
+  // Last check info
+  const lastCheck = (batch.checks && batch.checks.length > 0) ? batch.checks[batch.checks.length - 1] : null;
+  if (lastCheck) {
+    const lastTemp = lastCheck.brewTemp || lastCheck.ambientTemp || lastCheck.temp;
+    html += '<div class="detail-row"><span class="dl">Last Check</span><span class="dv">' + formatDateShort(lastCheck.date) + ' (Day ' + daysBetween(batch.f1Start, lastCheck.date) + ')</span></div>';
+    if (lastTemp) html += '<div class="detail-row"><span class="dl">Last Temp</span><span class="dv">' + lastTemp + '\u00B0C</span></div>';
+  }
+  // Estimated ready
+  const confPill = '<span class="confidence-pill ' + confidence.level + '" style="margin-left:6px">' + confidence.label + '</span>';
+  if (isReady) {
+    html += '<div class="detail-row"><span class="dl">Status' + confPill + '</span><span class="dv" style="color:var(--ready);font-weight:700">Ready to bottle \u2714</span></div>';
+  } else {
+    html += '<div class="detail-row"><span class="dl">Est. Ready' + confPill + '</span><span class="dv">' + formatDateShort(dateStrFromDate(range.earliest)) + ' \u2013 ' + formatDateShort(dateStrFromDate(range.latest)) + '</span></div>';
+  }
+  html += '</div>';
+
+  // Full Chart
+  const phChecks = (batch.checks || []).filter(c => c.ph);
+  html += '<div class="detail-section">';
+  html += renderPhChartLarge(batch, phChecks);
+  html += '</div>';
+
+  // Fermentation Check History Table
+  html += '<div class="detail-section"><h3>Check History</h3>';
+  const allChecks = [];
+  if (batch.startPh || batch.startBrewTemp) {
+    allChecks.push({
+      date: batch.f1Start,
+      day: 0,
+      ph: batch.startPh || null,
+      brewTemp: batch.startBrewTemp || null,
+      ambientTemp: null,
+      taste: 'Start'
+    });
+  }
+  (batch.checks || []).forEach(c => {
+    allChecks.push({
+      date: c.date,
+      day: daysBetween(batch.f1Start, c.date),
+      ph: c.ph || null,
+      brewTemp: c.brewTemp || null,
+      ambientTemp: c.ambientTemp || c.temp || null,
+      taste: c.taste || null
+    });
+  });
+
+  if (allChecks.length > 0) {
+    html += '<table class="ferm-table"><thead><tr>';
+    html += '<th>Date</th><th>Day</th><th>pH</th><th>Brew \u00B0C</th><th>Amb \u00B0C</th><th>Notes</th>';
+    html += '</tr></thead><tbody>';
+    allChecks.forEach(c => {
+      const phClass = c.ph ? (c.ph <= 3.5 ? 'td-ph in-zone' : 'td-ph') : '';
+      html += '<tr>';
+      html += '<td>' + formatDateShort(c.date) + '</td>';
+      html += '<td>' + c.day + '</td>';
+      html += '<td class="' + phClass + '">' + (c.ph || '-') + '</td>';
+      html += '<td>' + (c.brewTemp || '-') + '</td>';
+      html += '<td>' + (c.ambientTemp || '-') + '</td>';
+      html += '<td class="td-taste">' + (c.taste || '-') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div style="font-size:13px;color:var(--text-light)">No checks yet. Add your first pH check!</div>';
+  }
+  html += '</div>';
+
+  // Quick Actions
+  html += '<div style="display:flex;gap:10px;margin-top:12px">';
+  html += '<button class="vessel-action" style="flex:1" onclick="closeDetail();openCheckForm(\'' + batch.id + '\')">Add Check</button>';
+  html += '<button class="vessel-action primary" style="flex:1" onclick="closeDetail();openBottleForm(\'' + batch.id + '\')">Bottle</button>';
+  html += '</div>';
+
+  // Link to full batch detail
+  html += '<div style="text-align:center;margin-top:10px">';
+  html += '<a href="javascript:void(0)" onclick="closeDetail();setTimeout(function(){openBatchDetail(\'' + batch.id + '\')},100)" style="color:var(--text-light);font-size:12px;text-decoration:underline">View full batch details (recipe, ratings) \u2192</a>';
+  html += '</div>';
+
+  card.innerHTML = html;
+  document.getElementById('detailOverlay').classList.add('active');
 }
 
 // ═══════════════════════════════════════════════════════
