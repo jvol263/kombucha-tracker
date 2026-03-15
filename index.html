@@ -1792,9 +1792,9 @@ function sugarFactor(batch) {
 }
 
 function calculateEstimatedReadyDate(batch) {
-  // Fast path: if latest pH is already in sweet spot, it's ready now
+  // Fast path: if latest pH is in or past the sweet spot, it's ready now
   const latestPh = getLatestPh(batch);
-  if (latestPh !== null && latestPh <= phBands.nearReady) {
+  if (latestPh !== null && latestPh <= phBands.sweetTop) {
     const today = new Date();
     today.setHours(0,0,0,0);
     return today;
@@ -1869,9 +1869,9 @@ function getEstimatedReadyRange(batch) {
   today.setHours(0,0,0,0);
   const daysSinceStart = Math.max(0, Math.floor((today - startDate) / 86400000));
 
-  // Fast path: if latest pH is already in sweet spot, it's ready now
+  // Fast path: if latest pH is in or past the sweet spot, it's ready now
   const latestPh = getLatestPh(batch);
-  if (latestPh !== null && latestPh <= phBands.nearReady) {
+  if (latestPh !== null && latestPh <= phBands.sweetTop) {
     return { earliest: today, latest: today, readyNow: true };
   }
 
@@ -2453,7 +2453,7 @@ function renderDashboard() {
         const range = getEstimatedReadyRange(activeBatch);
         const dLeft = daysUntil(estReady);
         const latestPh = getLatestPh(activeBatch);
-        const isReady = range.readyNow || (latestPh !== null && latestPh <= phBands.nearReady);
+        const isReady = range.readyNow || (latestPh !== null && latestPh <= phBands.sweetTop);
         let progressPct = 0;
         const estTotalDays = Math.max(1, Math.floor((estReady - new Date(activeBatch.f1Start + 'T00:00:00')) / 86400000));
         progressPct = isReady ? 100 : Math.min(100, Math.round((days / estTotalDays) * 100));
@@ -2560,7 +2560,11 @@ function checkAlerts() {
     if (latestPh !== null && latestPh <= phBands.nearReady) {
       const band = latestPh <= phBands.sour ? 'sour' : latestPh <= phBands.sweetBot ? 'past ready' : latestPh <= phBands.sweetTop ? 'sweet spot' : 'near ready';
       const urgent = latestPh <= phBands.sweetBot;
-      alerts.push({ type: urgent ? 'overdue' : 'ready', msg: vName + (urgent ? ' \u2014 pH ' + latestPh + ' is ' + band + '! Bottle soon.' : ' \u2014 pH ' + latestPh + ' (' + band + '). Ready to bottle!'), batchId: batch.id });
+      const inZone = latestPh <= phBands.sweetTop;
+      const msg = urgent ? vName + ' \u2014 pH ' + latestPh + ' is ' + band + '! Bottle soon.'
+        : inZone ? vName + ' \u2014 pH ' + latestPh + ' (' + band + '). Ready to bottle!'
+        : vName + ' \u2014 pH ' + latestPh + ' (' + band + '). Getting close!';
+      alerts.push({ type: urgent ? 'overdue' : inZone ? 'ready' : 'check-soon', msg: msg, batchId: batch.id });
     } else {
       const estReady = calculateEstimatedReadyDate(batch);
       const dl = daysUntil(estReady);
@@ -3543,11 +3547,30 @@ function renderPhChartLarge(batch, phChecks) {
   const cW = W - padL - padR;
   const cH = H - padT - padB;
 
-  // pH range — ensure sweet spot is always visible
+  // Fixed pH range for consistent, readable charts
   const phValues = dataPoints.map(d => d.ph);
-  const phMin = Math.min(Math.floor(Math.min(...phValues, phBands.sour) * 2) / 2 - 0.5, 2.5);
-  const phMax = Math.ceil(Math.max(...phValues) * 2) / 2 + 0.5;
-  const dayMax = Math.max(...dataPoints.map(d => d.day), 1);
+  const phMin = 2.75;
+  const phMax = Math.max(3.5, ...phValues);
+  let dayMax = Math.max(...dataPoints.map(d => d.day), 1);
+
+  // Pre-compute trendline regression for axis extension
+  let trendSlope = 0, trendIntercept = 0, trendTargetDay = null;
+  if (dataPoints.length >= 2) {
+    const n = dataPoints.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    dataPoints.forEach(p => { sumX += p.day; sumY += p.ph; sumXY += p.day * p.ph; sumX2 += p.day * p.day; });
+    const denom = n * sumX2 - sumX * sumX;
+    if (denom !== 0) {
+      trendSlope = (n * sumXY - sumX * sumY) / denom;
+      trendIntercept = (sumY - trendSlope * sumX) / n;
+      if (trendSlope < 0) {
+        trendTargetDay = (phTarget() - trendIntercept) / trendSlope;
+        if (trendTargetDay > 0 && trendTargetDay < dayMax * 3) {
+          dayMax = Math.max(dayMax, Math.ceil(trendTargetDay) + 1);
+        }
+      }
+    }
+  }
 
   function xd(day) { return padL + (day / dayMax) * cW; }
   function yph(ph) { return padT + ((phMax - ph) / (phMax - phMin)) * cH; }
@@ -3609,6 +3632,24 @@ function renderPhChartLarge(batch, phChecks) {
     svg += '<path class="ph-chart-line" d="' + pathParts.join(' ') + '"/>';
   }
 
+  // Trendline — linear regression extended to sweet spot intersection
+  if (trendSlope < 0) {
+    const d0 = 0, d1 = trendTargetDay || dayMax;
+    const ph0 = trendIntercept, ph1 = trendIntercept + trendSlope * d1;
+    const x0 = xd(d0), x1 = Math.min(padL + cW, xd(d1));
+    const y0 = Math.max(padT, Math.min(padT + cH, yph(ph0)));
+    const y1 = Math.max(padT, Math.min(padT + cH, yph(ph1)));
+    svg += '<line x1="' + x0.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '" stroke="var(--primary)" stroke-width="1" stroke-dasharray="6,3" opacity="0.5"/>';
+    // Mark intersection with sweet spot target
+    if (trendTargetDay && trendTargetDay > 0) {
+      const ix = xd(trendTargetDay), iy = yph(phTarget());
+      if (ix >= padL && ix <= padL + cW && iy >= padT && iy <= padT + cH) {
+        svg += '<circle cx="' + ix.toFixed(1) + '" cy="' + iy.toFixed(1) + '" r="4" fill="none" stroke="var(--ready)" stroke-width="1.5"/>';
+        svg += '<text style="font-size:8px;fill:var(--ready);font-weight:600" x="' + (ix + 6).toFixed(1) + '" y="' + (iy - 4).toFixed(1) + '">~Day ' + Math.round(trendTargetDay) + '</text>';
+      }
+    }
+  }
+
   // pH dots with labels — color-coded by band
   dataPoints.forEach(d => {
     let dotColor = 'var(--primary)';
@@ -3632,7 +3673,7 @@ function openVesselFermentationView(batchId) {
   const latestPh = getLatestPh(batch);
   const range = getEstimatedReadyRange(batch);
   const confidence = getEstimationConfidence(batch);
-  const isReady = range.readyNow || (latestPh !== null && latestPh <= phBands.nearReady);
+  const isReady = range.readyNow || (latestPh !== null && latestPh <= phBands.sweetTop);
 
   let html = '';
 
