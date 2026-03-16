@@ -1740,20 +1740,22 @@ function getEstimationConfidence(batch) {
   return { level: 'low', label: 'Low', score: score, max: maxScore };
 }
 
-// Enhanced estimate: if we have pH trend, use it to project ready date
-function estimateWithPhTrend(batch) {
+// Build pH data points from a batch
+function buildPhPoints(batch) {
   const phChecks = (batch.checks || []).filter(c => c.ph);
-  if (phChecks.length < 2 || !batch.startPh) return null;
-
-  // Build pH timeline
+  if (!batch.startPh) return [];
   const phPoints = [{ day: 0, ph: batch.startPh }];
   phChecks.forEach(c => {
     const day = daysBetween(batch.f1Start, c.date);
     phPoints.push({ day: day, ph: c.ph });
   });
   phPoints.sort((a, b) => a.day - b.day);
+  return phPoints;
+}
 
-  // Linear regression on pH vs days
+// Linear regression on pH points — returns { slope, intercept, targetDay } or null
+function linearPhRegression(phPoints) {
+  if (phPoints.length < 3) return null;
   const n = phPoints.length;
   let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
   phPoints.forEach(p => { sumX += p.day; sumY += p.ph; sumXY += p.day * p.ph; sumX2 += p.day * p.day; });
@@ -1761,18 +1763,112 @@ function estimateWithPhTrend(batch) {
   if (denom === 0) return null;
   const slope = (n * sumXY - sumX * sumY) / denom;
   const intercept = (sumY - slope * sumX) / n;
-
   if (slope >= 0) return null; // pH not dropping
+  const targetDay = (phTarget() - intercept) / slope;
+  if (targetDay < 0 || targetDay > 120) return null;
+  return { slope: slope, intercept: intercept, targetDay: targetDay, phAt: function(t) { return intercept + slope * t; } };
+}
 
-  // Target pH: midpoint of sweet spot
-  const targetPh = phTarget();
-  const estDay = (targetPh - intercept) / slope;
-  if (estDay < 0 || estDay > 90) return null;
+// Exponential decay fit: pH(t) = floor + (start - floor) * e^(-k*t)
+// Uses least-squares on log-transformed data to fit k and optionally floor
+function exponentialPhFit(phPoints) {
+  if (phPoints.length < 3) return null;
+  const phStart = phPoints[0].ph;
+  // Estimate floor as slightly below minimum observed pH, clamped to a reasonable range
+  let phFloor = Math.min(2.7, Math.min(...phPoints.map(p => p.ph)) - 0.1);
+  phFloor = Math.max(2.4, phFloor); // don't go below 2.4
+
+  // Transform: ln(pH(t) - floor) = ln(start - floor) - k*t
+  // This is a linear regression on transformed data: Y = A - k*t
+  const transformed = [];
+  for (let i = 0; i < phPoints.length; i++) {
+    const diff = phPoints[i].ph - phFloor;
+    if (diff <= 0) continue; // skip if at or below floor
+    transformed.push({ day: phPoints[i].day, logDiff: Math.log(diff) });
+  }
+  if (transformed.length < 3) return null;
+
+  // Linear regression on log-transformed data
+  const n = transformed.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  transformed.forEach(p => { sumX += p.day; sumY += p.logDiff; sumXY += p.day * p.logDiff; sumX2 += p.day * p.day; });
+  const denom = n * sumX2 - sumX * sumX;
+  if (denom === 0) return null;
+  const kNeg = (n * sumXY - sumX * sumY) / denom; // should be negative
+  const logA = (sumY - kNeg * sumX) / n;
+  const k = -kNeg; // decay constant (positive)
+  if (k <= 0) return null; // pH not decaying
+
+  // Refine phStart from fit: fitted start = floor + e^logA
+  const fittedStart = phFloor + Math.exp(logA);
+
+  // Predict pH at time t
+  function phAt(t) {
+    return phFloor + (fittedStart - phFloor) * Math.exp(-k * t);
+  }
+
+  // Solve for target day: t = -ln((target - floor) / (start - floor)) / k
+  const target = phTarget();
+  const ratio = (target - phFloor) / (fittedStart - phFloor);
+  if (ratio <= 0 || ratio >= 1) return null;
+  const targetDay = -Math.log(ratio) / k;
+  if (targetDay < 0 || targetDay > 120) return null;
+
+  return { k: k, phFloor: phFloor, fittedStart: fittedStart, targetDay: targetDay, phAt: phAt };
+}
+
+// Enhanced estimate: dual model — exponential (primary) + linear (earliest bound)
+// Returns { linearDay, expDay, primary: Date } or null
+function estimateWithPhTrend(batch) {
+  const phPoints = buildPhPoints(batch);
+  if (phPoints.length < 3) return null; // require 3+ data points
+
+  const lin = linearPhRegression(phPoints);
+  const exp = exponentialPhFit(phPoints);
+
+  // Need at least one model to work
+  if (!lin && !exp) return null;
 
   const startDate = new Date(batch.f1Start + 'T00:00:00');
+
+  // Primary estimate: prefer exponential (more accurate for biological decay)
+  const primaryDay = exp ? exp.targetDay : lin.targetDay;
   const readyDate = new Date(startDate);
-  readyDate.setDate(readyDate.getDate() + Math.round(estDay));
+  readyDate.setDate(readyDate.getDate() + Math.round(primaryDay));
   return readyDate;
+}
+
+// Get dual pH trend estimates for range calculation
+function getPhTrendRange(batch) {
+  const phPoints = buildPhPoints(batch);
+  if (phPoints.length < 3) return null;
+
+  const lin = linearPhRegression(phPoints);
+  const exp = exponentialPhFit(phPoints);
+
+  if (!lin && !exp) return null;
+
+  const startDate = new Date(batch.f1Start + 'T00:00:00');
+
+  // Linear = optimistic (earliest), Exponential = realistic (latest)
+  let earliest, latest;
+  if (lin && exp) {
+    const earlyDay = Math.min(lin.targetDay, exp.targetDay);
+    const lateDay = Math.max(lin.targetDay, exp.targetDay);
+    earliest = new Date(startDate);
+    earliest.setDate(earliest.getDate() + Math.round(earlyDay));
+    latest = new Date(startDate);
+    latest.setDate(latest.getDate() + Math.round(lateDay));
+  } else {
+    // Only one model available — use ±2 day range
+    const day = (lin || exp).targetDay;
+    earliest = new Date(startDate);
+    earliest.setDate(earliest.getDate() + Math.round(day) - 2);
+    latest = new Date(startDate);
+    latest.setDate(latest.getDate() + Math.round(day) + 2);
+  }
+
+  return { earliest: earliest, latest: latest, linear: lin, exponential: exp };
 }
 
 // SCOBY health adjustment factor
@@ -1875,15 +1971,14 @@ function getEstimatedReadyRange(batch) {
     return { earliest: today, latest: today, readyNow: true };
   }
 
-  // Try pH trend estimate — if available, anchor range to it (±2 days)
-  const phEstimate = estimateWithPhTrend(batch);
-  if (phEstimate) {
-    const early = new Date(phEstimate);
-    early.setDate(early.getDate() - 2);
-    const late = new Date(phEstimate);
-    late.setDate(late.getDate() + 2);
+  // Try dual pH trend estimate — linear (earliest) + exponential (latest)
+  const trendRange = getPhTrendRange(batch);
+  if (trendRange) {
+    const early = trendRange.earliest;
+    const late = trendRange.latest;
     // Don't show dates before today as "earliest"
     if (early < today) early.setTime(today.getTime());
+    if (late < today) late.setTime(today.getTime());
     return { earliest: early, latest: late };
   }
 
@@ -3542,8 +3637,8 @@ function renderPhChartLarge(batch, phChecks) {
   if (dataPoints.length < 1) return '<div style="color:var(--text-light);font-size:13px;padding:12px 0">No pH data yet. Add a check to see the chart.</div>';
 
   // Chart dimensions — pH only, no temp axis
-  const W = 340, H = 160;
-  const padL = 34, padR = 12, padT = 14, padB = 28;
+  const W = 340, H = 175;
+  const padL = 34, padR = 12, padT = 14, padB = 38;
   const cW = W - padL - padR;
   const cH = H - padT - padB;
 
@@ -3553,23 +3648,13 @@ function renderPhChartLarge(batch, phChecks) {
   const phMax = Math.max(3.5, ...phValues);
   let dayMax = Math.max(...dataPoints.map(d => d.day), 1);
 
-  // Pre-compute trendline regression for axis extension
-  let trendSlope = 0, trendIntercept = 0, trendTargetDay = null;
-  if (dataPoints.length >= 2) {
-    const n = dataPoints.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-    dataPoints.forEach(p => { sumX += p.day; sumY += p.ph; sumXY += p.day * p.ph; sumX2 += p.day * p.day; });
-    const denom = n * sumX2 - sumX * sumX;
-    if (denom !== 0) {
-      trendSlope = (n * sumXY - sumX * sumY) / denom;
-      trendIntercept = (sumY - trendSlope * sumX) / n;
-      if (trendSlope < 0) {
-        trendTargetDay = (phTarget() - trendIntercept) / trendSlope;
-        if (trendTargetDay > 0 && trendTargetDay < dayMax * 3) {
-          dayMax = Math.max(dayMax, Math.ceil(trendTargetDay) + 1);
-        }
-      }
-    }
+  // Pre-compute both trendline models for chart
+  const linModel = dataPoints.length >= 3 ? linearPhRegression(dataPoints) : null;
+  const expModel = dataPoints.length >= 3 ? exponentialPhFit(dataPoints) : null;
+  // Extend axis to show the furthest projection
+  const furthestDay = Math.max(linModel ? linModel.targetDay : 0, expModel ? expModel.targetDay : 0);
+  if (furthestDay > 0 && furthestDay < dayMax * 3) {
+    dayMax = Math.max(dayMax, Math.ceil(furthestDay) + 1);
   }
 
   function xd(day) { return padL + (day / dayMax) * cW; }
@@ -3632,21 +3717,54 @@ function renderPhChartLarge(batch, phChecks) {
     svg += '<path class="ph-chart-line" d="' + pathParts.join(' ') + '"/>';
   }
 
-  // Trendline — linear regression extended to sweet spot intersection
-  if (trendSlope < 0) {
-    const d0 = 0, d1 = trendTargetDay || dayMax;
-    const ph0 = trendIntercept, ph1 = trendIntercept + trendSlope * d1;
+  // Trendlines — linear (dashed straight) + exponential decay (dashed curve)
+  // Linear trendline — optimistic/earliest estimate
+  if (linModel) {
+    const d0 = 0, d1 = linModel.targetDay;
     const x0 = xd(d0), x1 = Math.min(padL + cW, xd(d1));
-    const y0 = Math.max(padT, Math.min(padT + cH, yph(ph0)));
-    const y1 = Math.max(padT, Math.min(padT + cH, yph(ph1)));
-    svg += '<line x1="' + x0.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '" stroke="var(--primary)" stroke-width="1" stroke-dasharray="6,3" opacity="0.5"/>';
-    // Mark intersection with sweet spot target
-    if (trendTargetDay && trendTargetDay > 0) {
-      const ix = xd(trendTargetDay), iy = yph(phTarget());
-      if (ix >= padL && ix <= padL + cW && iy >= padT && iy <= padT + cH) {
-        svg += '<circle cx="' + ix.toFixed(1) + '" cy="' + iy.toFixed(1) + '" r="4" fill="none" stroke="var(--ready)" stroke-width="1.5"/>';
-        svg += '<text style="font-size:8px;fill:var(--ready);font-weight:600" x="' + (ix + 6).toFixed(1) + '" y="' + (iy - 4).toFixed(1) + '">~Day ' + Math.round(trendTargetDay) + '</text>';
-      }
+    const y0 = Math.max(padT, Math.min(padT + cH, yph(linModel.phAt(d0))));
+    const y1 = Math.max(padT, Math.min(padT + cH, yph(linModel.phAt(d1))));
+    svg += '<line x1="' + x0.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '" stroke="#999" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.5"/>';
+    // Linear intersection marker
+    const lix = xd(linModel.targetDay), liy = yph(phTarget());
+    if (lix >= padL && lix <= padL + cW && liy >= padT && liy <= padT + cH) {
+      svg += '<circle cx="' + lix.toFixed(1) + '" cy="' + liy.toFixed(1) + '" r="3" fill="none" stroke="#999" stroke-width="1"/>';
+      const labelSide = expModel ? -1 : 1; // put linear label on left if exp also shown
+      svg += '<text style="font-size:7px;fill:#999" x="' + (lix + 5 * labelSide).toFixed(1) + '" y="' + (liy - 5).toFixed(1) + '" text-anchor="' + (labelSide < 0 ? 'end' : 'start') + '">D' + Math.round(linModel.targetDay) + '</text>';
+    }
+  }
+
+  // Exponential trendline — realistic/primary estimate (curved)
+  if (expModel) {
+    const steps = 40;
+    const endDay = expModel.targetDay;
+    const pathPts = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = (endDay / steps) * i;
+      const ph = expModel.phAt(t);
+      const px = xd(t), py = yph(ph);
+      // Clip to chart area
+      const cx = Math.max(padL, Math.min(padL + cW, px));
+      const cy = Math.max(padT, Math.min(padT + cH, py));
+      pathPts.push((i === 0 ? 'M' : 'L') + cx.toFixed(1) + ',' + cy.toFixed(1));
+    }
+    svg += '<path d="' + pathPts.join(' ') + '" fill="none" stroke="var(--primary)" stroke-width="1.2" stroke-dasharray="6,3" opacity="0.6"/>';
+    // Exponential intersection marker — prominent
+    const eix = xd(expModel.targetDay), eiy = yph(phTarget());
+    if (eix >= padL && eix <= padL + cW && eiy >= padT && eiy <= padT + cH) {
+      svg += '<circle cx="' + eix.toFixed(1) + '" cy="' + eiy.toFixed(1) + '" r="4" fill="none" stroke="var(--ready)" stroke-width="1.5"/>';
+      svg += '<text style="font-size:8px;fill:var(--ready);font-weight:600" x="' + (eix + 6).toFixed(1) + '" y="' + (eiy - 5).toFixed(1) + '">~Day ' + Math.round(expModel.targetDay) + '</text>';
+    }
+  }
+
+  // Legend for trendlines
+  if (linModel || expModel) {
+    let legendY = H - 2;
+    if (linModel && expModel) {
+      svg += '<line x1="' + padL + '" y1="' + legendY + '" x2="' + (padL + 16) + '" y2="' + legendY + '" stroke="#999" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.5"/>';
+      svg += '<text style="font-size:7px;fill:#999" x="' + (padL + 18) + '" y="' + (legendY + 2.5) + '">Linear</text>';
+      svg += '<line x1="' + (padL + 52) + '" y1="' + legendY + '" x2="' + (padL + 68) + '" y2="' + legendY + '" stroke="var(--primary)" stroke-width="1.2" stroke-dasharray="6,3" opacity="0.6"/>';
+      svg += '<text style="font-size:7px;fill:var(--primary)" x="' + (padL + 70) + '" y="' + (legendY + 2.5) + '">Exp. decay</text>';
     }
   }
 
