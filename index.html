@@ -2958,40 +2958,31 @@ function saveBottling() {
     addF2Batch(f2Batch);
   });
 
-  // 3. Optionally start new F1
+  // 3. Optionally open new F1 form (pre-filled from previous batch)
   const startNewF1 = document.getElementById('newF1Toggle').classList.contains('on');
-  if (startNewF1) {
-    const newBatch = {
-      vesselId: batch.vesselId,
-      vesselName: batch.vesselName,
-      status: 'f1_active',
-      f1Start: f1EndDate,
-      f1End: null,
-      completedDate: null,
-      teaType: batch.teaType,
-      teaAmount: batch.teaAmount,
-      teaUnit: batch.teaUnit,
-      sugarGrams: batch.sugarGrams,
-      sugarType: batch.sugarType,
-      waterLiters: batch.waterLiters,
-      starterMl: batch.starterMl,
-      totalLiters: batch.totalLiters,
-      scobyNotes: null,
-      scobyWeightG: batch.scobyWeightG,
-      scobyHealth: batch.scobyHealth,
-      startPh: null,
-      startBrewTemp: null,
-      endPh: null,
-      f1Ratings: null,
-      checks: [],
-      notes: null
-    };
-    addBatch(newBatch);
-  }
 
   closeModal('bottleOverlay');
-  showToast('Bottled! ' + bottles.length + ' F2 bottle' + (bottles.length > 1 ? 's' : '') + ' created' + (startNewF1 ? ' + new F1 started' : ''));
+  showToast('Bottled! ' + bottles.length + ' F2 bottle' + (bottles.length > 1 ? 's' : '') + ' created' + (startNewF1 ? ' \u2014 fill in new F1 details' : ''));
   checkAlerts();
+
+  if (startNewF1) {
+    // Short delay so the bottle modal fully closes before opening the form
+    setTimeout(function() {
+      openNewBatchForm(batch.vesselId);
+      // Pre-fill from previous batch values
+      document.getElementById('nbDate').value = f1EndDate;
+      if (batch.teaType) document.getElementById('nbTeaType').value = batch.teaType;
+      if (batch.teaAmount) document.getElementById('nbTeaAmount').value = batch.teaAmount;
+      if (batch.teaUnit) document.getElementById('nbTeaUnit').value = batch.teaUnit;
+      if (batch.sugarType) document.getElementById('nbSugarType').value = batch.sugarType;
+      if (batch.sugarGrams) document.getElementById('nbSugarGrams').value = batch.sugarGrams;
+      if (batch.waterLiters) document.getElementById('nbWaterLiters').value = batch.waterLiters;
+      if (batch.starterMl) document.getElementById('nbStarterMl').value = batch.starterMl;
+      if (batch.totalLiters) document.getElementById('nbTotalLiters').value = batch.totalLiters;
+      if (batch.scobyWeightG) document.getElementById('nbScobyWeight').value = batch.scobyWeightG;
+      if (batch.scobyHealth) document.getElementById('nbScobyHealth').value = batch.scobyHealth;
+    }, 300);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
